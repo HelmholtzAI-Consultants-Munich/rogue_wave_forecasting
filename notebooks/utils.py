@@ -80,10 +80,7 @@ def plot_impurity_feature_importance(importance, names, title, save=None):
     feature_names = np.array(names)
 
     # Create a DataFrame using a dictionary
-    data = {
-        "feature_names": feature_names,
-        "feature_importance": feature_importance
-    }
+    data = {"feature_names": feature_names, "feature_importance": feature_importance}
     fi_df = pd.DataFrame(data)
 
     # Sort the DataFrame in order decreasing feature importance
@@ -91,28 +88,55 @@ def plot_impurity_feature_importance(importance, names, title, save=None):
 
     # Define size of bar plot
     plt.figure(figsize=(5, 4))
-    
+
     # Plot Seaborn bar chart
-    sns.barplot(
-        x=fi_df["feature_importance"],
-        y=fi_df["feature_names"],
-        color="#3470a3"
-    )
-    
+    sns.barplot(x=fi_df["feature_importance"], y=fi_df["feature_names"], color="#3470a3")
+
     # Add chart labels
     plt.title(title)
     plt.xlabel("Feature Importance")
     plt.ylabel("Feature Names")
-    
+
     # Adjust layout to make room for labels
     plt.tight_layout()
-    
+
     # Save the plot if a save path is provided
     if save:
-        plt.savefig(save, dpi=300, bbox_inches='tight')
-    
+        plt.savefig(save, dpi=300, bbox_inches="tight")
+
     # Show the plot
     plt.show()
 
 
+def plot_predictions(
+    y_true,
+    y_pred,
+    title="True vs. Predicted Values",
+    xlabel="True Values",
+    ylabel="Predicted Values",
+    save=None,
+):
+    # Create a figure with specified size
+    plt.figure(figsize=(4, 4))
 
+    # Create a scatter plot with Seaborn
+    sns.set_theme(style="white")
+    sns.scatterplot(x=y_true, y=y_pred, alpha=0.5, color="#6693F5")
+
+    # Add a reference line y = x
+    max_val = max(y_true.max(), y_pred.max())
+    min_val = min(y_true.min(), y_pred.min())
+    plt.plot([min_val, max_val], [min_val, max_val], "r--", lw=2)
+
+    # Set plot labels and grid
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.grid(True)
+
+    # Save the plot
+    if save:
+        plt.savefig(f"{save}.png", bbox_inches="tight", dpi=300)
+
+    # Show the plot
+    plt.show()
