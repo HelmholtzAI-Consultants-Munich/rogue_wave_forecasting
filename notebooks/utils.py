@@ -74,23 +74,45 @@ def plot_distributions_target(target1, target2):
     plt.tight_layout(rect=[0, 0, 1, 0.95])
 
 
-def plot_impurity_feature_importance(importance, names, title):
+def plot_impurity_feature_importance(importance, names, title, save=None):
     # Create arrays from feature importance and feature names
     feature_importance = np.array(importance)
     feature_names = np.array(names)
 
-    # Create a DataFrame using a Dictionary
-    data = {"feature_names": feature_names, "feature_importance": feature_importance}
+    # Create a DataFrame using a dictionary
+    data = {
+        "feature_names": feature_names,
+        "feature_importance": feature_importance
+    }
     fi_df = pd.DataFrame(data)
 
     # Sort the DataFrame in order decreasing feature importance
-    fi_df.sort_values(by=["feature_importance"], ascending=False, inplace=True)
+    fi_df.sort_values(by="feature_importance", ascending=False, inplace=True)
 
     # Define size of bar plot
     plt.figure(figsize=(5, 4))
-    # Plot Searborn bar chart
-    sns.barplot(x=fi_df["feature_importance"], y=fi_df["feature_names"], color="#3470a3")
+    
+    # Plot Seaborn bar chart
+    sns.barplot(
+        x=fi_df["feature_importance"],
+        y=fi_df["feature_names"],
+        color="#3470a3"
+    )
+    
     # Add chart labels
     plt.title(title)
-    plt.xlabel("feature importance")
-    plt.ylabel("feature names")
+    plt.xlabel("Feature Importance")
+    plt.ylabel("Feature Names")
+    
+    # Adjust layout to make room for labels
+    plt.tight_layout()
+    
+    # Save the plot if a save path is provided
+    if save:
+        plt.savefig(save, dpi=300, bbox_inches='tight')
+    
+    # Show the plot
+    plt.show()
+
+
+
