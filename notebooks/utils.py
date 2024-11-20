@@ -146,3 +146,20 @@ def plot_predictions(
 
     # Show the plot
     plt.show()
+
+
+def plot_correlation_matrix(data, figsize=(5, 5), annot=True, labelsize=10):
+    corr = data.corr()
+    mask = np.triu(np.ones_like(corr, dtype=bool))
+    np.fill_diagonal(mask, False)
+
+    f, ax = plt.subplots(figsize=figsize)
+    ax.tick_params(axis="both", which="major", labelsize=labelsize)
+    sns.heatmap(
+        round(corr, 2),
+        mask=mask,
+        cmap=sns.diverging_palette(220, 10, as_cmap=True),
+        square=True,
+        ax=ax,
+        annot=annot,
+    )
