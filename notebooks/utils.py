@@ -114,6 +114,7 @@ def plot_predictions(
     title="True vs. Predicted Values",
     xlabel="True Values",
     ylabel="Predicted Values",
+    textstr="",
     save=None,
 ):
     # Create a figure with specified size
@@ -133,6 +134,11 @@ def plot_predictions(
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.grid(True)
+
+    props = dict(boxstyle="round", facecolor="white", alpha=0.5)
+    plt.text(
+        0.05, 0.95, textstr, transform=plt.gca().transAxes, fontsize=12, verticalalignment="top", bbox=props
+    )
 
     # Save the plot
     if save:
