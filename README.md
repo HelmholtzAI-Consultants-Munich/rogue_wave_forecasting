@@ -19,3 +19,12 @@ To achieve the above defined project goal, we will:
     - iterate via inner cross validation over all feature combinations
     - use outer cross validation for choosing the best model
     - test chosen model on test set
+
+
+## Installing Requirements
+
+```
+conda create -n rogue_wave python=3.11
+conda activate rogue_wave
+pip install -r requirements.txt
+```
