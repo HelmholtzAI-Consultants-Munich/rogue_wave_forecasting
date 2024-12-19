@@ -1,9 +1,9 @@
 # Add here the pip packages you would like to install on this virtual environment / kernel
 pip
 ipykernel
+numpy
 scikit-learn
 matplotlib
-numpy
 pandas
 seaborn
 scikit-learn
