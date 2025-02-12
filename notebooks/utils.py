@@ -10,6 +10,8 @@ import seaborn as sns
 import pickle
 from collections import Counter
 
+from sklearn.base import ClassifierMixin, RegressorMixin
+from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.metrics import balanced_accuracy_score, confusion_matrix, f1_score, mean_squared_error, r2_score
 from scipy.stats import spearmanr
 
@@ -172,6 +174,11 @@ def plot_correlation_matrix(data, figsize=(5, 5), annot=True, labelsize=10):
 
 
 def load_data(case, undersample, undersample_method):
+    print(
+        f"Load data for case {case}"
+        + f'{f" with {undersample_method} undersampled data" if undersample else ""}.'
+    )
+
     # Load and unpack the data
     with open(
         f'../data/data_case{case}{f"_{undersample_method}_undersampled" if undersample else ""}.pickle', "rb"
@@ -221,7 +228,10 @@ def load_data_and_model(model_type, case, undersample_method, undersample):
     print("Test dataset target distribution:")
     print(Counter(y_test_cat))
 
-    print(f"Loaded the following model: {model}")
+    tree_depths = [estimator.tree_.max_depth for estimator in model.estimators_]
+    average_depth = sum(tree_depths) / len(tree_depths)
+
+    print(f"Loaded the following model: {model} with an average tree depth of : {average_depth}")
 
     if model_type == "class":
         # Predict training labels
@@ -263,3 +273,54 @@ def load_data_and_model(model_type, case, undersample_method, undersample):
         plot_predictions(y_true=y_true, y_pred=y_pred, textstr=f"$R^2={round(r2_score(y_true, y_pred), 3)}$")
 
     return model, X_train, y_train, y_train_cat, X_test, y_test, y_test_cat
+
+
+def run_CV(model, hyperparameter_grid, num_cv, X, y_train_cat, y_train):
+    # Tune hyperparameters
+    skf = StratifiedKFold(n_splits=num_cv).split(X, y_train_cat)
+
+    gridsearch_classifier = GridSearchCV(model, hyperparameter_grid, cv=skf)
+
+    if isinstance(model, ClassifierMixin):
+        gridsearch_classifier.fit(X, y_train_cat)
+    elif isinstance(model, RegressorMixin):
+        gridsearch_classifier.fit(X, y_train)
+
+    # Take the best estimator
+    model = gridsearch_classifier.best_estimator_
+
+    # Collect CV Results
+    cv_results = pd.concat(
+        [
+            pd.DataFrame(gridsearch_classifier.cv_results_["params"]),
+            pd.DataFrame(gridsearch_classifier.cv_results_["mean_test_score"], columns=["score"]),
+        ],
+        axis=1,
+    )
+
+    return model, cv_results
+
+
+def evaluate_best_classifier(model, X, y, dataset):
+    # Predict training labels
+    y_pred = model.predict(X)
+    y_true = y
+
+    print(f"Evaluate on {dataset} Set")
+    print(f"Balanced acc: {balanced_accuracy_score(y_true, y_pred)}")
+    print(f"Macro F1 score: {f1_score(y_true, y_pred, average='macro')}")
+    print(f"Confusion matrix:\n{confusion_matrix(y_true, y_pred)}")
+
+
+def evaluate_best_regressor(model, X, y, dataset, plot=True):
+    # Predict labels
+    y_pred = model.predict(X)
+    y_true = y
+
+    print(f"Evaluate on {dataset} Set")
+    print(f"Train set MSE: {round(mean_squared_error(y_true, y_pred), 3)}")
+    print(f"Train set R^2: {round(r2_score(y_true, y_pred), 3)}")
+    print(f"Train set Spearman R: {round(spearmanr(y_true, y_pred).correlation, 3)}")
+
+    if plot:
+        plot_predictions(y_true=y_true, y_pred=y_pred, textstr=f"$R^2={round(r2_score(y_true, y_pred), 3)}$")
