@@ -203,7 +203,7 @@ def load_data(case, undersample, undersample_method):
     return data_train, data_test, y_train, y_train_cat, X_train, y_test, y_test_cat, X_test
 
 
-def load_data_and_model(model_type, case, undersample_method, undersample):
+def load_data_and_model(model_type, case, undersample_method, undersample, output=True):
 
     # Load and unpack the data
     with open(
@@ -233,44 +233,49 @@ def load_data_and_model(model_type, case, undersample_method, undersample):
 
     print(f"Loaded the following model: {model} with an average tree depth of : {average_depth}")
 
-    if model_type == "class":
-        # Predict training labels
-        y_pred = model.predict(X_train)
-        y_true = y_train_cat
+    if output:
+        if model_type == "class":
+            # Predict training labels
+            y_pred = model.predict(X_train)
+            y_true = y_train_cat
 
-        print(f"Balanced acc: {balanced_accuracy_score(y_true, y_pred)}")
-        print(f"Macro F1 score: {f1_score(y_true, y_pred, average='macro')}")
-        print(f"Confusion matrix:\n{confusion_matrix(y_true, y_pred)}")
+            print(f"Balanced acc: {balanced_accuracy_score(y_true, y_pred)}")
+            print(f"Macro F1 score: {f1_score(y_true, y_pred, average='macro')}")
+            print(f"Confusion matrix:\n{confusion_matrix(y_true, y_pred)}")
 
-        # Predict test labels
-        y_pred = model.predict(X_test)
-        y_true = y_test_cat
+            # Predict test labels
+            y_pred = model.predict(X_test)
+            y_true = y_test_cat
 
-        print(f"Balanced acc: {balanced_accuracy_score(y_true, y_pred)}")
-        print(f"Macro F1 score: {f1_score(y_true, y_pred, average='macro')}")
-        print(f"Confusion matrix:\n{confusion_matrix(y_true, y_pred)}")
+            print(f"Balanced acc: {balanced_accuracy_score(y_true, y_pred)}")
+            print(f"Macro F1 score: {f1_score(y_true, y_pred, average='macro')}")
+            print(f"Confusion matrix:\n{confusion_matrix(y_true, y_pred)}")
 
-    if model_type == "reg":
+        if model_type == "reg":
 
-        # Predict labels
-        y_pred = model.predict(X_train)
-        y_true = y_train
+            # Predict labels
+            y_pred = model.predict(X_train)
+            y_true = y_train
 
-        print(f"Train set MSE: {round(mean_squared_error(y_true, y_pred), 3)}")
-        print(f"Train set R^2: {round(r2_score(y_true, y_pred), 3)}")
-        print(f"Train set Spearman R: {round(spearmanr(y_true, y_pred).correlation, 3)}")
+            print(f"Train set MSE: {round(mean_squared_error(y_true, y_pred), 3)}")
+            print(f"Train set R^2: {round(r2_score(y_true, y_pred), 3)}")
+            print(f"Train set Spearman R: {round(spearmanr(y_true, y_pred).correlation, 3)}")
 
-        plot_predictions(y_true=y_true, y_pred=y_pred, textstr=f"$R^2={round(r2_score(y_true, y_pred), 3)}$")
+            plot_predictions(
+                y_true=y_true, y_pred=y_pred, textstr=f"$R^2={round(r2_score(y_true, y_pred), 3)}$"
+            )
 
-        # Predict labels
-        y_pred = model.predict(X_test)
-        y_true = y_test
+            # Predict labels
+            y_pred = model.predict(X_test)
+            y_true = y_test
 
-        print(f"Test set MSE: {round(mean_squared_error(y_true, y_pred), 3)}")
-        print(f"Test set R^2: {round(r2_score(y_true, y_pred), 3)}")
-        print(f"Test set Spearman R: {round(spearmanr(y_true, y_pred).correlation, 3)}")
+            print(f"Test set MSE: {round(mean_squared_error(y_true, y_pred), 3)}")
+            print(f"Test set R^2: {round(r2_score(y_true, y_pred), 3)}")
+            print(f"Test set Spearman R: {round(spearmanr(y_true, y_pred).correlation, 3)}")
 
-        plot_predictions(y_true=y_true, y_pred=y_pred, textstr=f"$R^2={round(r2_score(y_true, y_pred), 3)}$")
+            plot_predictions(
+                y_true=y_true, y_pred=y_pred, textstr=f"$R^2={round(r2_score(y_true, y_pred), 3)}$"
+            )
 
     return model, X_train, y_train, y_train_cat, X_test, y_test, y_test_cat
 
