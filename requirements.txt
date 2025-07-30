@@ -1,16 +1,16 @@
-# Add here the pip packages you would like to install on this virtual environment / kernel
-pip
-ipykernel
-numpy
-scikit-learn
-matplotlib
-pandas
-seaborn
-scikit-learn
-shap
 fgclustering
+imblearn
+matplotlib
+numpy
+pandas
+scikit-learn
+scipy
+seaborn
+shap
+tqdm
+
+ipykernel
 ipython
 jupyter
 jupyterlab
 notebook
-imblearn
