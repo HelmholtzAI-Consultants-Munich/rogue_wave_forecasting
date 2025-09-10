@@ -8,6 +8,7 @@ scipy
 seaborn
 shap
 tqdm
+xgboost
 
 ipykernel
 ipython

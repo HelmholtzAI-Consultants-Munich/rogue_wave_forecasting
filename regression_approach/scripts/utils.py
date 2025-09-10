@@ -2,6 +2,7 @@
 ##### Imports
 ############################################################
 
+import os
 import math
 import pickle
 import shap
@@ -15,8 +16,9 @@ import seaborn as sns
 from collections import Counter
 
 from sklearn.base import ClassifierMixin, RegressorMixin
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from scipy.stats import spearmanr
 
 ############################################################
@@ -111,11 +113,11 @@ def load_data(file_data):
     return data_train, data_test, y_train, y_train_cat, X_train, y_test, y_test_cat, X_test
 
 
-def run_CV(model, hyperparameter_grid, num_cv, X, y_train_cat, y_train):
+def run_CV(model, hyperparameter_grid, num_cv, X, y_train_cat, y_train, n_jobs):
     # Tune hyperparameters
     skf = StratifiedKFold(n_splits=num_cv).split(X, y_train_cat)
 
-    gridsearch_classifier = GridSearchCV(model, hyperparameter_grid, cv=skf)
+    gridsearch_classifier = GridSearchCV(model, hyperparameter_grid, cv=skf, n_jobs=n_jobs)
 
     if isinstance(model, ClassifierMixin):
         gridsearch_classifier.fit(X, y_train_cat)
@@ -142,13 +144,28 @@ def evaluate_best_regressor(model, X, y, dataset, plot=True):
     y_pred = model.predict(X)
     y_true = y
 
+    mse = round(mean_squared_error(y_true, y_pred), 3)
+    mae = round(mean_absolute_error(y_true, y_pred), 3)
+    r2 = round(r2_score(y_true, y_pred), 3)
+    spearman_r = round(spearmanr(y_true, y_pred).correlation, 3)
+
     print(f"Evaluate on {dataset} Set")
-    print(f"Train set MSE: {round(mean_squared_error(y_true, y_pred), 3)}")
-    print(f"Train set R^2: {round(r2_score(y_true, y_pred), 3)}")
-    print(f"Train set Spearman R: {round(spearmanr(y_true, y_pred).correlation, 3)}")
 
     if plot:
-        plot_predictions(y_true=y_true, y_pred=y_pred, textstr=f"$R^2={round(r2_score(y_true, y_pred), 3)}$")
+        textstr = f"$MSE={mse}$\n$MAE={mae}$\n$R^2={r2}$\n$Spearman\\ R={spearman_r}$"
+        plot_predictions(y_true=y_true, y_pred=y_pred, textstr=textstr)
+
+
+def get_model_size(model):
+    file = f"./model_size_test.pickle"
+    with open(file, "wb") as handle:
+        pickle.dump(model, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    # Get the size of the saved file
+    model_size_gb = os.path.getsize(file) / (1024**3)
+    print(f"Model size on disk: {model_size_gb:.4f} GB")
+
+    os.remove(file)
 
 
 def plot_predictions(
@@ -180,7 +197,7 @@ def plot_predictions(
 
     props = dict(boxstyle="round", facecolor="white", alpha=0.5)
     plt.text(
-        0.05, 0.95, textstr, transform=plt.gca().transAxes, fontsize=12, verticalalignment="top", bbox=props
+        0.05, 0.95, textstr, transform=plt.gca().transAxes, fontsize=8, verticalalignment="top", bbox=props
     )
 
     # Save the plot
@@ -213,10 +230,10 @@ def load_data_and_model(file_data_model, output=True):
     print("Test dataset target distribution:")
     print(Counter(y_test_cat))
 
-    tree_depths = [estimator.tree_.max_depth for estimator in model.estimators_]
-    average_depth = sum(tree_depths) / len(tree_depths)
-
-    print(f"Loaded the following model: {model} with an average tree depth of : {average_depth}")
+    if isinstance(model, RandomForestClassifier) or isinstance(model, RandomForestRegressor):
+        tree_depths = [estimator.tree_.max_depth for estimator in model.estimators_]
+        average_depth = sum(tree_depths) / len(tree_depths)
+        print(f"Loaded the following model: {model} with an average tree depth of : {average_depth}")
 
     if output:
         # Predict labels
