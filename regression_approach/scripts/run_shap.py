@@ -28,18 +28,18 @@ seed = 42
 
 def _init_worker(model, data_background):
     _global_model = model
-    _explainer = shap.TreeExplainer(
-        model=_global_model,
-        model_output="raw",
-        feature_perturbation="tree_path_dependent",
-    )
+    # _explainer = shap.TreeExplainer(
+    #     model=_global_model,
+    #     model_output="raw",
+    #     feature_perturbation="tree_path_dependent",
+    # )
 
     # Use the explainer below for deep learning models
-    # data_background = shap.utils.sample(data_background, 5000, random_state=seed)
-    # _explainer = shap.DeepExplainer(
-    #     model=_global_model,
-    #     data=data_background,
-    # )
+    data_background = shap.utils.sample(data_background, 5000, random_state=seed)
+    _explainer = shap.DeepExplainer(
+        model=_global_model,
+        data=data_background,
+    )
 
 
 def _process_batch(args):
@@ -51,7 +51,7 @@ def _process_batch(args):
         pickle.dump(shap_values_batch, f)
     print(f"Stored file in: {file_shap_batch}")
 
-    return i  # Optional: used for tracking in tqdm
+    return i
 
 
 def run_shap(
@@ -70,8 +70,8 @@ def run_shap(
         pickle.dump(data, handle)
     print(f"Stored file in: {file_data}")
 
+    # Parallel SHAP computation
     print("Parallel batch SHAP computation...")
-
     batches = []
     for i in range(0, len(data), batch_size):
         if i > last_batch:

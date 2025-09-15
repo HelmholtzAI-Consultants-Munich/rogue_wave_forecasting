@@ -20,5 +20,5 @@ conda -V
 # Activate the Conda environment
 echo "Using Python:"
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -V
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u shap_rf.py --dataset test --file_data_model ./model_and_data.pickle
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u shap_rf.py --dataset train --file_data_model ./model_and_data.pickle
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --dataset test --file_data_model ../results/random_forest/model_and_data.pickle
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --dataset train --file_data_model ../results/random_forest/model_and_data.pickle

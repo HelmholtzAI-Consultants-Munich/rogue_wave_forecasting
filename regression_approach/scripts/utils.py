@@ -58,36 +58,6 @@ def plot_distributions(dataset, ncols):
     plt.tight_layout(rect=[0, 0, 1, 0.95])
 
 
-def plot_rfe(cv_results):
-    plt.figure(figsize=(8, 4))
-    plt.xlabel("Number of Selected Features")
-    plt.ylabel("Mean Test Score")
-    plt.errorbar(
-        x=cv_results["n_features"],
-        y=cv_results["mean_test_score"],
-        yerr=cv_results["std_test_score"],
-    )
-    plt.title("Recursive Feature Elimination")
-    plt.show()
-
-
-def plot_correlation_matrix(data, figsize=(5, 5), annot=True, labelsize=10):
-    corr = data.corr()
-    mask = np.triu(np.ones_like(corr, dtype=bool))
-    np.fill_diagonal(mask, False)
-
-    f, ax = plt.subplots(figsize=figsize)
-    ax.tick_params(axis="both", which="major", labelsize=labelsize)
-    sns.heatmap(
-        round(corr, 2),
-        mask=mask,
-        cmap=sns.diverging_palette(220, 10, as_cmap=True),
-        square=True,
-        ax=ax,
-        annot=annot,
-    )
-
-
 def load_data(file_data):
     print("Loading data...")
 
