@@ -47,6 +47,7 @@ def argument_parser():
         "--model_type", type=str, help="Type of model to use, i.e., 'treebased' or 'dl' or 'kernel'"
     )
     parser.add_argument("--file_data_model", type=str, help="File with model and data")
+    parser.add_argument("--dir_output", type=str, help="Directory for output files")
 
     args = parser.parse_args()
     batch_size = args.batch_size
@@ -54,10 +55,11 @@ def argument_parser():
     dataset = args.dataset
     n_dataset = args.n_dataset
     n_background = args.n_background
-    file_data_model = args.file_data_model
     model_type = args.model_type
+    file_data_model = args.file_data_model
+    dir_output = args.dir_output
 
-    return batch_size, last_batch, dataset, n_dataset, n_background, file_data_model, model_type
+    return batch_size, last_batch, dataset, n_dataset, n_background, model_type, file_data_model, dir_output
 
 
 def get_datasets(X_train, y_train, y_train_cat, X_test, y_test, y_test_cat, dataset, n_samples, n_background):
@@ -139,10 +141,10 @@ def _init_worker(model, data_background, model_type):
 
 
 def _process_batch(args):
-    i, X_batch, dir_output = args
+    i, X_batch, dir_output, dataset = args
     shap_values_batch = _explainer.shap_values(X_batch)
 
-    file_shap_batch = os.path.join(dir_output, f"shap_batch{i}.pkl")
+    file_shap_batch = os.path.join(dir_output, f"{dataset}_shap_batch{i}.pkl")
     with open(file_shap_batch, "wb") as f:
         pickle.dump(shap_values_batch, f)
     print(f"Stored file in: {file_shap_batch}")
@@ -156,24 +158,18 @@ def run_shap(
     data,
     last_batch,
     batch_size,
+    dataset,
     model_type,
     dir_output,
     n_jobs,
 ):
-    # Store sampled dataset
-    file_data = os.path.join(dir_output, "dataset.pkl")
-    os.makedirs(os.path.dirname(file_data), exist_ok=True)
-    with open(file_data, "wb") as handle:
-        pickle.dump(data, handle)
-    print(f"Stored file in: {file_data}")
-
     # Parallel SHAP computation
     print("Parallel batch SHAP computation...")
     batches = []
     for i in range(0, len(data), batch_size):
         if i > last_batch:
             X_batch = data[i : i + batch_size]
-            batches.append((i, X_batch, dir_output))
+            batches.append((i, X_batch, dir_output, dataset))
 
     with Pool(
         processes=n_jobs,
@@ -191,7 +187,7 @@ def run_shap(
     shap_values = []
 
     for i in tqdm(range(0, len(data), batch_size)):
-        file_shap_batch = os.path.join(dir_output, f"shap_batch{i}.pkl")
+        file_shap_batch = os.path.join(dir_output, f"{dataset}_shap_batch{i}.pkl")
         with open(file_shap_batch, "rb") as handle:
             shap_values_batch = pickle.load(handle)
         shap_values.append(shap_values_batch)
@@ -212,7 +208,7 @@ def run_shap(
     )
 
     # Save object to a pickle file
-    file_shap = os.path.join(dir_output, "shap.pkl")
+    file_shap = os.path.join(dir_output, f"{dataset}_shap.pkl")
     with open(file_shap, "wb") as f:
         pickle.dump(explanation, f)
 
@@ -220,7 +216,9 @@ def run_shap(
 
 
 def main():
-    batch_size, last_batch, dataset, n_dataset, n_background, file_data_model, model_type = argument_parser()
+    batch_size, last_batch, dataset, n_dataset, n_background, model_type, file_data_model, dir_output = (
+        argument_parser()
+    )
     print(f"Run SHAP on last_batch={last_batch}, dataset={dataset}, model_type={model_type}")
 
     n_jobs = int(os.environ.get("SLURM_CPUS_ON_NODE", 1))
@@ -234,7 +232,6 @@ def main():
         X_train, y_train, y_train_cat, X_test, y_test, y_test_cat, dataset, n_dataset, n_background
     )
 
-    dir_output = f"/lustre/groups/aiconsultants/workspace/lisa.barros/shap/"
     os.makedirs(dir_output, exist_ok=True)
     print(f"Output directory: {dir_output}")
 
@@ -244,6 +241,7 @@ def main():
         data=data,
         last_batch=last_batch,
         batch_size=batch_size,
+        dataset=dataset,
         model_type=model_type,
         dir_output=dir_output,
         n_jobs=n_jobs,

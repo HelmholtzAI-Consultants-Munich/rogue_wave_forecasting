@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=rw_shap
-#SBATCH --output=rw_shap.out
-#SBATCH --error=rw_shap.err
+#SBATCH --job-name=rw_shap_xgb
+#SBATCH --output=rw_shap_xgb.out
+#SBATCH --error=rw_shap_xgb.err
 #SBATCH --partition=cpu_p
 #SBATCH --qos=cpu_normal
 #SBATCH --ntasks=16          # Number of tasks
@@ -20,5 +20,5 @@ conda -V
 # Activate the Conda environment
 echo "Using Python:"
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -V
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --dataset test --n_dataset 20000 --n_background 2000 --model_type treebased --file_data_model ../results/random_forest/model_and_data.pickle
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --dataset train --n_dataset 80000 --n_background 2000 --model_type treebased --file_data_model ../results/random_forest/model_and_data.pickle
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --dataset test --n_dataset 40000 --n_background 2000 --model_type treebased --file_data_model ../results/xg_boost/model_and_data.pickle --dir_output /lustre/groups/aiconsultants/workspace/lisa.barros/shap/xg_boost/
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --dataset train --n_dataset 160000 --n_background 2000 --model_type treebased --file_data_model ../results/xg_boost/model_and_data.pickle --dir_output /lustre/groups/aiconsultants/workspace/lisa.barros/shap/xg_boost/
