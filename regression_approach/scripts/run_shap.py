@@ -44,7 +44,7 @@ def argument_parser():
         help="Number of samples to use for background dataset, default all",
     )
     parser.add_argument(
-        "--model_type", type=str, help="Type of model to use, i.e., 'treebased' or 'dl' or 'kernel'"
+        "--model_type", type=str, help="Type of model to use, i.e., 'RF', 'XGB', 'DL' or 'Kernel'"
     )
     parser.add_argument("--file_data_model", type=str, help="File with model and data")
     parser.add_argument("--dir_output", type=str, help="Directory for output files")
@@ -115,21 +115,21 @@ def _init_worker(model, data_background, model_type):
     global _global_model, _explainer
     _global_model = model
 
-    if model_type == "treebased":
+    if model_type == "RF" or model_type == "XGB":
         print("Using TreeExplainer for tree-based models.")
         _explainer = shap.TreeExplainer(
             model=_global_model,
             model_output="raw",
             feature_perturbation="tree_path_dependent",
         )
-    elif model_type == "kernel":
+    elif model_type == "Kernel":
         print("Using KernelExplainer for any model.")
         print(f"Using {data_background.shape[0]} samples for background dataset.")
         _explainer = shap.KernelExplainer(
             model=_global_model.predict,
             data=data_background,
         )
-    elif model_type == "dl":
+    elif model_type == "DL":
         print("Using DeepExplainer for deep learning models.")
         print(f"Using {data_background.shape[0]} samples for background dataset.")
         _explainer = shap.DeepExplainer(
@@ -137,7 +137,9 @@ def _init_worker(model, data_background, model_type):
             data=data_background,
         )
     else:
-        raise ValueError(f"Model type {model_type} not recognized. Use 'treebased', 'kernel' or 'dl'.")
+        raise ValueError(f"Model type {model_type} not recognized. Use 'RF', 'XGB', 'Kernel' or 'DL'.")
+
+    print("Worker initialized.")
 
 
 def _process_batch(args):
@@ -221,13 +223,19 @@ def main():
     )
     print(f"Run SHAP on last_batch={last_batch}, dataset={dataset}, model_type={model_type}")
 
-    n_jobs = int(os.environ.get("SLURM_CPUS_ON_NODE", 1))
+    # n_jobs = int(os.environ.get("SLURM_CPUS_ON_NODE", 1))
+    n_jobs = 4
     print(f"Detected {n_jobs} CPU cores via SLURM.")
 
     print("Loading data and model...")
     model, X_train, y_train, y_train_cat, X_test, y_test, y_test_cat = utils.load_data_and_model(
         file_data_model, output=False
     )
+
+    # For XGB, set n_jobs=1 to avoid conflicts with multiprocessing
+    if model_type == "XGB":
+        model.set_params(n_jobs=1)
+
     data_background, data = get_datasets(
         X_train, y_train, y_train_cat, X_test, y_test, y_test_cat, dataset, n_dataset, n_background
     )
