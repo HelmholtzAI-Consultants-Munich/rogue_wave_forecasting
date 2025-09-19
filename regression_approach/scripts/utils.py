@@ -83,11 +83,11 @@ def load_data(file_data):
     return data_train, data_test, y_train, y_train_cat, X_train, y_test, y_test_cat, X_test
 
 
-def run_CV(model, hyperparameter_grid, num_cv, X, y_train_cat, y_train, n_jobs):
+def run_CV(model, hyperparameter_grid, num_cv, X, y_train_cat, y_train, n_jobs, verbose=0):
     # Tune hyperparameters
     skf = StratifiedKFold(n_splits=num_cv).split(X, y_train_cat)
 
-    gridsearch_classifier = GridSearchCV(model, hyperparameter_grid, cv=skf, n_jobs=n_jobs)
+    gridsearch_classifier = GridSearchCV(model, hyperparameter_grid, cv=skf, n_jobs=n_jobs, verbose=verbose)
 
     if isinstance(model, ClassifierMixin):
         gridsearch_classifier.fit(X, y_train_cat)
@@ -229,7 +229,7 @@ def load_data_and_model(file_data_model, output=True):
     return model, X_train, y_train, y_train_cat, X_test, y_test, y_test_cat
 
 
-def plot_shap_dependence(explanation, X_sample):
+def plot_shap_dependence(explanation):
     # 1. Compute mean absolute SHAP values
     mean_shap = np.abs(explanation.values).mean(axis=0)
 
@@ -250,7 +250,7 @@ def plot_shap_dependence(explanation, X_sample):
         shap.dependence_plot(
             ind=feature,
             shap_values=explanation.values,
-            features=X_sample,
+            features=explanation.data,
             feature_names=explanation.feature_names,
             ax=axes[i],
             show=False,

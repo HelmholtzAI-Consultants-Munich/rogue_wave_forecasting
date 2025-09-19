@@ -1,0 +1,24 @@
+#!/bin/bash
+#SBATCH --job-name=svm
+#SBATCH --output=svm.out
+#SBATCH --error=svm.err
+#SBATCH --partition=gpu_p
+#SBATCH --qos=gpu_priority
+#SBATCH --ntasks=8          # Number of tasks
+#SBATCH --cpus-per-task=8   # Number of CPU cores per task
+#SBATCH --mem=100GB           # Memory allocation
+#SBATCH --gres=gpu:2
+
+# Ensure Conda is in the PATH
+export PATH=~/anaconda3/bin:$PATH
+export LD_LIBRARY_PATH=~/anaconda3/lib:$LD_LIBRARY_PATH
+
+# Initialize Conda in the script 
+source ~/anaconda3/etc/profile.d/conda.sh
+echo "Using Conda:"
+conda -V 
+
+# Activate the Conda environment
+echo "Using Python:"
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -V
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_svm_regression.py
