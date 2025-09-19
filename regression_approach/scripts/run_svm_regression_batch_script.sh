@@ -4,10 +4,10 @@
 #SBATCH --error=svm.err
 #SBATCH --partition=gpu_p
 #SBATCH --qos=gpu_priority
-#SBATCH --ntasks=8          # Number of tasks
-#SBATCH --cpus-per-task=8   # Number of CPU cores per task
+#SBATCH --ntasks=4          # Number of tasks
+#SBATCH --cpus-per-task=1   # Number of CPU cores per task
 #SBATCH --mem=100GB           # Memory allocation
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:1
 
 # Ensure Conda is in the PATH
 export PATH=~/anaconda3/bin:$PATH
