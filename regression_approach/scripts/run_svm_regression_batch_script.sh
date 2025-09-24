@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=svm
-#SBATCH --output=svm.out
-#SBATCH --error=svm.err
+#SBATCH --job-name=svm_1
+#SBATCH --output=svm_1.out
+#SBATCH --error=svm_1.err
 #SBATCH --partition=gpu_p
-#SBATCH --qos=gpu_priority
-#SBATCH --ntasks=4          # Number of tasks
+#SBATCH --qos=gpu_normal
+#SBATCH --ntasks=2          # Number of tasks
 #SBATCH --cpus-per-task=1   # Number of CPU cores per task
-#SBATCH --mem=100GB           # Memory allocation
+#SBATCH --mem=200GB         # Memory allocation
 #SBATCH --gres=gpu:1
 
 # Ensure Conda is in the PATH

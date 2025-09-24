@@ -23,7 +23,7 @@ import utils
 
 print("Setup...")
 
-n_jobs = 4
+n_jobs = 1
 print(
     f"Using {n_jobs} cores from {os.cpu_count()} available cores."
 )  # how many CPU cores are available on the current machine
@@ -32,11 +32,12 @@ seed = 42
 num_cv = 5
 
 hyperparameter_grid = {
-    "kernel": ["rbf", "poly"],  # RBF is flexible for non-linear patterns
+    "kernel": ["rbf"],  # RBF is flexible for non-linear patterns
     "C": [0.1, 1, 10],  # Regularization strength (low = more regularization)
-    "gamma": ["auto", 0.01, 0.1, 1],  # Kernel coefficient for 'rbf', 'poly'
+    "gamma": ["auto", 0.01, 0.1, 1],  # Kernel coefficient for 'rbf'
     "epsilon": [0.01, 0.1, 0.2],  # Margin of tolerance where no penalty is given
 }
+print(hyperparameter_grid)
 
 print("Loading data...")
 

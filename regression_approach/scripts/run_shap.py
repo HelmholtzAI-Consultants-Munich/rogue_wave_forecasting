@@ -171,6 +171,8 @@ def run_shap(
     for i in range(0, len(data), batch_size):
         if i > last_batch:
             X_batch = data[i : i + batch_size]
+            if model_type == "DL":
+                X_batch = X_batch.values if isinstance(X_batch, pd.DataFrame) else X_batch
             batches.append((i, X_batch, dir_output, dataset))
 
     with Pool(
@@ -192,6 +194,8 @@ def run_shap(
         file_shap_batch = os.path.join(dir_output, f"{dataset}_shap_batch{i}.pkl")
         with open(file_shap_batch, "rb") as handle:
             shap_values_batch = pickle.load(handle)
+        if model_type == "DL":
+            shap_values_batch = shap_values_batch.squeeze(-1)
         shap_values.append(shap_values_batch)
         os.remove(file_shap_batch)
 
