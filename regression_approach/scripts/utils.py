@@ -125,6 +125,8 @@ def evaluate_best_regressor(model, X, y, dataset, plot=True):
         textstr = f"$MSE={mse}$\n$MAE={mae}$\n$R^2={r2}$\n$Spearman\\ R={spearman_r}$"
         plot_predictions(y_true=y_true, y_pred=y_pred, textstr=textstr)
 
+    return y_true, y_pred, mse, mae, r2, spearman_r
+
 
 def get_model_size(model):
     file = f"./model_size_test.pickle"
@@ -147,6 +149,10 @@ def plot_predictions(
     textstr="",
     save=None,
 ):
+    # Convert to 1D arrays for DL models
+    y_true = np.ravel(y_true)
+    y_pred = np.ravel(y_pred)
+
     # Create a figure with specified size
     plt.figure(figsize=(4, 4))
 

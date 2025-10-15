@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=svm_1
-#SBATCH --output=svm_1.out
-#SBATCH --error=svm_1.err
+#SBATCH --job-name=svm_1_02
+#SBATCH --output=svm_1_02.out
+#SBATCH --error=svm_1_02.err
 #SBATCH --partition=gpu_p
 #SBATCH --qos=gpu_normal
 #SBATCH --ntasks=2          # Number of tasks
@@ -21,4 +21,4 @@ conda -V
 # Activate the Conda environment
 echo "Using Python:"
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -V
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_svm_regression.py
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_svm_regression.py --gamma 1 --epsilon 0.2
