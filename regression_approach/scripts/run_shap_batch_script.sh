@@ -1,12 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=ffnn_rw_shap
-#SBATCH --output=ffnn_rw_shap.out
-#SBATCH --error=ffnn_rw_shap.err
-#SBATCH --partition=cpu_p
-#SBATCH --qos=cpu_normal
-#SBATCH --ntasks=16          # Number of tasks
+#SBATCH --job-name=svm_rw_shap
+#SBATCH --output=svm_rw_shap.out
+#SBATCH --error=svm_rw_shap.err
+#SBATCH --partition=gpu_p
+#SBATCH --qos=gpu_normal
+#SBATCH --ntasks=4          # Number of tasks
 #SBATCH --cpus-per-task=1   # Number of CPU cores
-#SBATCH --mem=100GB           # Memory allocation
+#SBATCH --mem=100GB         # Memory allocation
+#SBATCH --gres=gpu:1
 
 # Ensure Conda is in the PATH
 export PATH=~/anaconda3/bin:$PATH
@@ -20,5 +21,5 @@ conda -V
 # Activate the Conda environment
 echo "Using Python:"
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -V
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --dataset test --n_dataset 40000 --n_background 2000 --model_type DL --file_data_model ../results/ffnn/model_and_data.pickle --dir_output /lustre/groups/aiconsultants/workspace/lisa.barros/shap/ffnn/
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --dataset train --n_dataset 160000 --n_background 2000 --model_type DL --file_data_model ../results/ffnn/model_and_data.pickle --dir_output /lustre/groups/aiconsultants/workspace/lisa.barros/shap/ffnn/
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --dataset test --n_dataset 40000 --n_background 200 --model_type Kernel --file_data_model ../results/svm/model_and_data.pickle --dir_output /lustre/groups/aiconsultants/workspace/lisa.barros/shap/svm/
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --dataset train --n_dataset 160000 --n_background 200 --model_type Kernel --file_data_model ../results/svm/model_and_data.pickle --dir_output /lustre/groups/aiconsultants/workspace/lisa.barros/shap/svm/
