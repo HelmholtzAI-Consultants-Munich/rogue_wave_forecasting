@@ -4,6 +4,7 @@
 
 import os
 import sys
+import time
 import shap
 import pickle
 import argparse
@@ -29,24 +30,13 @@ def argument_parser():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Run SHAP.")
     parser.add_argument("--batch_size", type=int, default=100, help="Batch size for SHAP computation")
-    parser.add_argument("--last_batch", type=int, default=-1, help="Last batch index to process")
+    parser.add_argument("--last_batch", type=int, default=-1, help="Last batch index processed for resuming")
     parser.add_argument("--dataset", type=str, help="Using 'train' or 'test' dataset")
-    parser.add_argument(
-        "--n_dataset",
-        type=int,
-        default=None,
-        help="Number of samples to use for SHAP computation, default all",
-    )
-    parser.add_argument(
-        "--n_background",
-        type=int,
-        default=None,
-        help="Number of samples to use for background dataset, default all",
-    )
-    parser.add_argument(
-        "--model_type", type=str, help="Type of model to use, i.e., 'RF', 'XGB', 'DL' or 'Kernel'"
-    )
+    parser.add_argument("--n_dataset", type=int, default=None, help="Number of samples for SHAP computation")
+    parser.add_argument("--n_background", type=int, default=None, help="Num. samples for background dataset")
+    parser.add_argument("--model_type", type=str, help="Type of input model: 'RF', 'XGB', 'DL' or 'Kernel'")
     parser.add_argument("--file_data_model", type=str, help="File with model and data")
+    parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs")
     parser.add_argument("--dir_output", type=str, help="Directory for output files")
 
     args = parser.parse_args()
@@ -57,58 +47,64 @@ def argument_parser():
     n_background = args.n_background
     model_type = args.model_type
     file_data_model = args.file_data_model
+    n_jobs = args.n_jobs
     dir_output = args.dir_output
 
-    return batch_size, last_batch, dataset, n_dataset, n_background, model_type, file_data_model, dir_output
+    return (
+        batch_size,
+        last_batch,
+        dataset,
+        n_dataset,
+        n_background,
+        model_type,
+        file_data_model,
+        n_jobs,
+        dir_output,
+    )
 
 
-def get_datasets(X_train, y_train, y_train_cat, X_test, y_test, y_test_cat, dataset, n_samples, n_background):
-    data_background = X_train
-    if (n_background is not None and n_background > X_train.shape[0]) or n_background is None:
-        data_background = X_train
-    else:
-        data_background = subsample(X_train, y_train, y_train_cat, n_background)
-        # data_background = shap.utils.sample(data_background, 5000, random_state=seed)
+def subsample(X, y, y_cat, n_samples, random_state=42):
+    # Combine features and labels into one DataFrame
+    df = X.copy()
+    df["target"] = y
+    df["target_class"] = y_cat
 
-    if dataset == "train":
-        print(f"Number of train samples {X_train.shape[0]}")
-        if (n_samples is not None and n_samples > X_train.shape[0]) or n_samples is None:
-            data = X_train
-        else:
-            data = subsample(X_train, y_train, y_train_cat, n_samples)
-        print(f"Using {data.shape[0]} train samples.")
+    # Compute stratified sample sizes per class
+    sample_sizes = df["target_class"].value_counts(normalize=True).mul(n_samples).round().astype(int)
 
-    elif dataset == "test":
-        print(f"Number of test samples {X_test.shape[0]}")
-        if (n_samples is not None and n_samples > X_test.shape[0]) or n_samples is None:
-            data = X_test
-        else:
-            data = subsample(X_test, y_test, y_test_cat, n_samples)
-        print(f"Using {data.shape[0]} test samples.")
-
-    return data_background, data
-
-
-def subsample(X_train, y_train, y_train_cat, n_samples):
-    df = X_train.copy()
-    df["target"] = y_train
-    df["target_class"] = y_train_cat
-
-    class_counts = df["target_class"].value_counts(normalize=True)
-    sample_sizes = (class_counts * n_samples).round().astype(int)
-
-    # Stratified sampling
-    df = pd.concat(
+    # Perform stratified sampling
+    sampled_df = pd.concat(
         [
-            df[df["target_class"] == cls].sample(n=n_samples, random_state=42)
-            for cls, n_samples in sample_sizes.items()
+            group.sample(n=sample_sizes[cls], random_state=random_state)
+            for cls, group in df.groupby("target_class")
+            if cls in sample_sizes
         ]
     )
 
     # Drop helper columns
-    data_subsampled = df.drop(columns=["target", "target_class"])
+    data_subsampled = sampled_df.drop(columns=["target", "target_class"])
 
     return data_subsampled
+
+
+def get_datasets(X_train, y_train, y_train_cat, X_test, y_test, y_test_cat, dataset, n_samples, n_background):
+    def _get_dataset(X, y, y_cat, dataset, n_samples):
+        if (n_samples is not None and n_samples > X.shape[0]) or n_samples is None:
+            data = X
+        else:
+            data = subsample(X, y, y_cat, n_samples)
+        print(f"Using {data.shape[0]} {dataset} samples of {X.shape[0]} in total.")
+        return data
+
+    data_background = _get_dataset(X_train, y_train, y_train_cat, "background", n_background)
+
+    if dataset == "train":
+        data_shap = _get_dataset(X_train, y_train, y_train_cat, dataset, n_samples)
+
+    elif dataset == "test":
+        data_shap = _get_dataset(X_test, y_test, y_test_cat, dataset, n_samples)
+
+    return data_background, data_shap
 
 
 def _init_worker(model, data_background, model_type):
@@ -123,15 +119,17 @@ def _init_worker(model, data_background, model_type):
             feature_perturbation="tree_path_dependent",
         )
     elif model_type == "Kernel":
-        print("Using KernelExplainer for any model.")
-        print(f"Using {data_background.shape[0]} samples for background dataset.")
+        print(
+            f"Using KernelExplainer for any model with {data_background.shape[0]} samples for background dataset."
+        )
         _explainer = shap.KernelExplainer(
             model=_global_model.predict,
             data=data_background,
         )
     elif model_type == "DL":
-        print("Using DeepExplainer for deep learning models.")
-        print(f"Using {data_background.shape[0]} samples for background dataset.")
+        print(
+            f"Using DeepExplainer for deep learning models with {data_background.shape[0]} samples for background dataset."
+        )
         _explainer = shap.DeepExplainer(
             model=_global_model,
             data=data_background,
@@ -166,7 +164,7 @@ def run_shap(
     n_jobs,
 ):
     # Parallel SHAP computation
-    print("Parallel batch SHAP computation...")
+    print("Setup SHAP computation.")
     batches = []
     for i in range(0, len(data), batch_size):
         if i > last_batch:
@@ -175,16 +173,21 @@ def run_shap(
                 X_batch = X_batch.values if isinstance(X_batch, pd.DataFrame) else X_batch
             batches.append((i, X_batch, dir_output, dataset))
 
-    with Pool(
-        processes=n_jobs,
-        initializer=_init_worker,
-        initargs=(
-            model,
-            data_background,
-            model_type,
-        ),
-    ) as pool:
-        list(tqdm(pool.imap(_process_batch, batches), total=len(batches)))
+    if n_jobs == 1:
+        # No multiprocessing: run sequentially
+        print("Sequential batch SHAP computation...")
+        _init_worker(model, data_background, model_type)
+        for args in tqdm(batches, total=len(batches)):
+            _process_batch(args)
+    else:
+        # Use multiprocessing
+        print("Parallel batch SHAP computation...")
+        with Pool(
+            processes=n_jobs,
+            initializer=_init_worker,
+            initargs=(model, data_background, model_type),
+        ) as pool:
+            list(tqdm(pool.imap(_process_batch, batches), total=len(batches)))
 
     # Aggregate SHAP Results
     print("Aggregate SHAP values...")
@@ -222,19 +225,32 @@ def run_shap(
 
 
 def main():
-    batch_size, last_batch, dataset, n_dataset, n_background, model_type, file_data_model, dir_output = (
-        argument_parser()
-    )
+    (
+        batch_size,
+        last_batch,
+        dataset,
+        n_dataset,
+        n_background,
+        model_type,
+        file_data_model,
+        n_jobs,
+        dir_output,
+    ) = argument_parser()
     print(f"Run SHAP on last_batch={last_batch}, dataset={dataset}, model_type={model_type}")
 
-    # n_jobs = int(os.environ.get("SLURM_CPUS_ON_NODE", 1))
-    n_jobs = 4
-    print(f"Detected {n_jobs} CPU cores via SLURM.")
+    n_jobs_available = int(os.environ.get("SLURM_CPUS_ON_NODE", 1))
+    print(f"Detected {n_jobs_available} CPU cores via SLURM. Using n_jobs={n_jobs} for SHAP computation.")
 
     print("Loading data and model...")
     model, X_train, y_train, y_train_cat, X_test, y_test, y_test_cat = utils.load_data_and_model(
         file_data_model, output=False
     )
+
+    start = time.time()
+    prediction = model.predict(X_train.iloc[[0]])
+    end = time.time()
+
+    print(f"Predicting a single sample: {prediction}, which took {end - start:.6f} seconds")
 
     # For XGB, set n_jobs=1 to avoid conflicts with multiprocessing
     if model_type == "XGB":
