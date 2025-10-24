@@ -119,9 +119,8 @@ def evaluate_best_regressor(model, X, y, dataset, plot=True):
     r2 = round(r2_score(y_true, y_pred), 3)
     spearman_r = round(spearmanr(y_true, y_pred).correlation, 3)
 
-    print(f"Evaluate on {dataset} Set")
-
     if plot:
+        print(f"Evaluate on {dataset} Set")
         textstr = f"$MSE={mse}$\n$MAE={mae}$\n$R^2={r2}$\n$Spearman\\ R={spearman_r}$"
         plot_predictions(y_true=y_true, y_pred=y_pred, textstr=textstr)
 
@@ -200,11 +199,12 @@ def load_data_and_model(file_data_model, output=True):
     X_train = data_train.drop(columns=["AI_10min", "AI_10min_cat"])
     X_test = data_test.drop(columns=["AI_10min", "AI_10min_cat"])
 
-    print("Training dataset target distribution:")
-    print(Counter(y_train_cat))
+    if output:
+        print("Training dataset target distribution:")
+        print(Counter(y_train_cat))
 
-    print("Test dataset target distribution:")
-    print(Counter(y_test_cat))
+        print("Test dataset target distribution:")
+        print(Counter(y_test_cat))
 
     if isinstance(model, RandomForestClassifier) or isinstance(model, RandomForestRegressor):
         tree_depths = [estimator.tree_.max_depth for estimator in model.estimators_]
@@ -235,7 +235,7 @@ def load_data_and_model(file_data_model, output=True):
     return model, X_train, y_train, y_train_cat, X_test, y_test, y_test_cat
 
 
-def plot_shap_dependence(explanation):
+def plot_shap_dependence(explanation, num_cols=6):
     # 1. Compute mean absolute SHAP values
     mean_shap = np.abs(explanation.values).mean(axis=0)
 
@@ -245,10 +245,9 @@ def plot_shap_dependence(explanation):
 
     # 3. Set up grid layout
     n_features = len(sorted_features)
-    cols = 6
-    rows = math.ceil(n_features / cols)
+    rows = math.ceil(n_features / num_cols)
 
-    fig, axes = plt.subplots(rows, cols, figsize=(cols * 6, rows * 4))
+    fig, axes = plt.subplots(rows, num_cols, figsize=(num_cols * 6, rows * 4))
     axes = axes.flatten()
 
     # 4. Generate SHAP dependence plots in the grid
