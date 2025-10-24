@@ -32,36 +32,57 @@ def parse_argument_type(arg_str):
 def argument_parser():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Run SVM regression.")
+    parser.add_argument("--kernel", help="Kernel type for SVM")
+    parser.add_argument("--C", help="Regularization parameter for SVM")
     parser.add_argument("--gamma", help="Gamma parameter for SVM")
-    parser.add_argument("--epsilon", type=float, help="Epsilon parameter for SVM")
+    parser.add_argument("--epsilon", help="Epsilon parameter for SVM")
+    parser.add_argument("--num_cv", type=int, default=5, help="Number of cross-validation folds")
 
     args = parser.parse_args()
+    kernel = args.kernel
+    C = parse_argument_type(args.C)
     gamma = parse_argument_type(args.gamma)
     epsilon = parse_argument_type(args.epsilon)
+    num_cv = args.num_cv
 
-    return gamma, epsilon
+    if kernel is None:
+        kernel = ["rbf"]
+    else:
+        kernel = [kernel]
+
+    if C is None:
+        C = [0.1, 1, 10]
+    else:
+        C = [C]
+
+    if gamma is None:
+        gamma = ["auto", 0.01, 0.1, 1]
+    else:
+        gamma = [gamma]
+
+    if epsilon is None:
+        epsilon = [0.01, 0.1, 0.2]
+    else:
+        epsilon = [epsilon]
+
+    return kernel, C, gamma, epsilon, num_cv
 
 
 def main():
 
     print("Setup...")
 
-    gamma, epsilon = argument_parser()
-    print(f"Using gamma: {gamma}, epsilon: {epsilon}")
-
+    # We set n_jobs=1 because thundersvm uses GPU.
     n_jobs = 1
-    print(
-        f"Using {n_jobs} cores from {os.cpu_count()} available cores. We set n_jobs=1 because thundersvm uses GPU."
-    )  # how many CPU cores are available on the current machine
-
-    num_cv = 5
+    kernel, C, gamma, epsilon, num_cv = argument_parser()
 
     hyperparameter_grid = {
-        "kernel": ["rbf"],  # RBF is flexible for non-linear patterns
-        "C": [0.1, 1, 10],  # Regularization strength (low = more regularization)
-        "gamma": [gamma],  # Kernel coefficient for 'rbf' [0.001, 0.01, 0.1, 1, 'auto']
-        "epsilon": [epsilon],  # Margin of tolerance where no penalty is given [0.01, 0.1, 0.2]
+        "kernel": kernel,
+        "C": C,
+        "gamma": gamma,
+        "epsilon": epsilon,
     }
+
     print(hyperparameter_grid)
 
     print("Loading data...")
