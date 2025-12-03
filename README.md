@@ -1,27 +1,31 @@
 # Prediction and Explanation of Rogue Waves
 
-## Project Description
+## Project Overview
 
-**Problem Definition:** Rogue waves are extreme individual waves that can pose a threat to ships and offshore platforms. The prediction of such waves could help to avoid accidents. However, the underlying mechanisms of Rogue Wave formation are not fully understood yet.
+- **Problem.** Rogue waves are extreme Sea Surface Height events that endanger offshore operations. The physics are only partially understood, so data-driven forecasts offer a pragmatic mitigation route.
+- **Objective.** Predict the maximum relative wave height `H/Hs` for the next 10 minutes and surface the oceanographic conditions that drive rogue-wave likelihood via explainable AI.
 
-**Project Goal:** Use AI models to predict the maximum relative wave hight 𝐻/𝐻𝑠 within the upcoming time window and use eXplainable AI methods to identify the parameters that enhance the rogue wave probability.
+## Analytical Workflow
 
-## Approach
+The `regression_approach/notebooks/` folder documents the full study. Execute the notebooks in numerical order to reproduce the pipeline:
 
-To achieve the above defined project goal, we will:
-
-- train a classification model to identify the parameters that are predictive of rogue waves 
-    - use an ElasticNet model that is directly interpretable via model coefficients
-    - use a Random Forest model if the linear model is not capable of modelling the data due to non-linearities in the feature-target relationshop and use Random Forest Feature Importance, SHAp and FGC for interpretation of the model results
-- train a regression model for forcasting the maximum relative wave hight within the upcoming 10 min
-    - depending on the classification results either use an ElasticNet or Random Forest Regressor
-- perform feature selection to get a predictive model with a minimum amount of features
-    - iterate via inner cross validation over all feature combinations
-    - use outer cross validation for choosing the best model
-    - test chosen model on test set
+1. **00_data_processing.ipynb** cleans raw measurements, applies physical thresholds, and exports the modelling matrix.
+2. **01_linear_regression.ipynb** benchmarks ElasticNet baselines. Cross-validated `R²` peaks at ~0.06, signalling strong non-linearities.
+3. **02_random_forest_regression.ipynb** tunes random forest model and computed shap values. 
+4. **03_xg_boost_regression.ipynb** tunes xgboost model and computed shap values.
+5. **04_svm_regression.ipynb** fits ThunderSVM regressors on GPU and computed shap values. 
+6. **05_ffnn_regression.ipynb** evaluates feed-forward neural net and computed shap values.
+7. **06_summary.ipynb** consolidates metrics and compares model explanations.
+8. **07_stbility_and_performance.ipynb** stress-tests the chosen XGBoost model with stratified folds.
 
 
-## Installing Requirements
+## Findings
+
+- **Non-linearity dominates.** Tree-based and kernel models outperform linear baselines by nearly an order of magnitude in `R²`.
+- **Top performers.** Random Forest, XGBoost and ThunderSVM achieve cross-validated `R²` around 0.94–0.95.
+- **Stability.** Stratified resampling (5-fold, seed 42) yields stable test-target distributions and narrow error variability.
+
+## Reproducing the Experiments
 
 ```
 conda create -n rogue_wave python=3.11
@@ -29,11 +33,11 @@ conda activate rogue_wave
 pip install -r requirements.txt
 ```
 
-## SVM Model
+- SHAP batch jobs for the final models can be launched via `run_shap_batch_script_*.sh` after activating the environment.
 
-For the SVM model we used the ThunderSVM (https://thundersvm.readthedocs.io/en/latest/index.html) package to leverage training with GPUs.
+## ThunderSVM Setup
 
-To train the model on the cluster, we installed thunderSVM for linux:
+We rely on [ThunderSVM](https://thundersvm.readthedocs.io/en/latest/index.html) to accelerate SVM training. Example build commands are provided for both Linux (CUDA) and macOS (CPU/OpenMP):
 
 ```
 git clone https://github.com/Xtra-Computing/thundersvm.git
@@ -41,28 +45,14 @@ git clone https://github.com/Xtra-Computing/thundersvm.git
 cd thundersvm
 mkdir build && cd build
 
-cmake \ 
+# Linux + CUDA 12.6
+cmake \
   -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-12.6 \
   ..
-
 make -j
 
-cd ../python
-pip install .
-```
-
-Here, we set the cuda version to 12.6, because this is the latest available version on the cluster.
-
-To be able to load the trained model locally, installed thunderSVM on mac OS:
-
-```
-git clone https://github.com/Xtra-Computing/thundersvm.git
-brew install cmake libomp eigen
-
-cd thundersvm
-mkdir build && cd build
-
-cmake \      
+# macOS (CPU-only)
+cmake \
   -DUSE_CUDA=OFF \
   -DEigen3_DIR=/opt/homebrew/share/eigen3/cmake \
   -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I/opt/homebrew/opt/libomp/include" \
@@ -71,19 +61,16 @@ cmake \
   -DOpenMP_CXX_LIB_NAMES=omp \
   -DOpenMP_omp_LIBRARY=/opt/homebrew/opt/libomp/lib/libomp.dylib \
   ..
-
 make -j
 
 cd ../python
 pip install .
 ```
 
-**NOTE:**
-To make it run I had to change the following before running cmake:
-1. change ```cmake_minimum_required(VERSION x.x)``` to ```cmake_minimum_required(VERSION 3.5)```
-2. in the following file *thundersvm/src/thundersvm/model/svmmodel.cpp* comment the lines
+> **Note.** When building locally we lowered `cmake_minimum_required` to `3.5` and commented the call to `sum_kernel_values_instant` inside `thundersvm/src/thundersvm/model/svmmodel.cpp` to avoid a compilation issue with OpenMP.
 
-```
-        // sum_kernel_values_instant(coef, sv.size(), sv_start, n_sv, rho, kernel_values,instance_predict, n_classes,
-        //                  batch_ins.size(),vote_device);
-```
+## Repository Map
+
+- `regression_approach/notebooks/` – data preparation, model training, evaluation, and stability studies.
+- `regression_approach/scripts/` – utility modules, SHAP runners, and batch scripts for the cluster.
+- `regression_approach/results/` – cross-validation scores and SHAP values produced by the notebooks.
