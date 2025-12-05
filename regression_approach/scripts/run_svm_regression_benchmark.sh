@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=svm_1_02
-#SBATCH --output=svm_1_02.out
-#SBATCH --error=svm_1_02.err
+#SBATCH --job-name=svm_benchmark
+#SBATCH --output=svm_benchmark.out
+#SBATCH --error=svm_benchmark.err
 #SBATCH --partition=gpu_p
 #SBATCH --qos=gpu_normal
 #SBATCH --ntasks=2          # Number of tasks

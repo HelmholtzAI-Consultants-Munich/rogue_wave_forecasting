@@ -2,10 +2,14 @@ import time
 import pandas as pd
 
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler
 from thundersvm import SVR
 
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from scipy.stats import spearmanr
+
+seed = 42
 
 # Data file
 file_data = "../data/abin_matrix_full_encoded.csv"
@@ -50,30 +54,40 @@ data_rogue_waves_class[target_cat] = data_rogue_waves_class[target].apply(
 )
 data_rogue_waves_class[target_cat] = data_rogue_waves_class[target_cat].astype(int)
 
-
-data_train, data_test = train_test_split(
-    data_rogue_waves_class, stratify=data_rogue_waves_class[target_cat], train_size=0.80, random_state=seed
-)
-
-data_train.reset_index(inplace=True, drop=True)
-data_test.reset_index(inplace=True, drop=True)
-
-X_train = data_train[features]
-y_train = data_train[target]
+X = data_rogue_waves_class.drop(columns=["AI_10min", "AI_10min_cat"])
+y = data_rogue_waves_class["AI_10min"]
+y_cat = data_rogue_waves_class["AI_10min_cat"]
 
 
 # SVM hyperparameters for best model
-C = 10
-epsilon = 0.01
-gamma = 1
-kernel = "rbf"
+hyperparameters = {"C": 10, "epsilon": 0.01, "gamma": 1, "kernel": "rbf"}
 
-scaler = StandardScaler()
-X_train_transformed = scaler.fit_transform(X_train)
+for i in range(5):
+    skf = StratifiedKFold(n_splits=5, random_state=seed, shuffle=True)
 
-start = time.time()
-model = SVR(C=C, epsilon=epsilon, gamma=gamma, kernel=kernel)
+    for i, (train_index, test_index) in enumerate(skf.split(X, y_cat)):
+        fold = i + 1
 
-model.fit(X_train_transformed, y_train)
-end = time.time()
-print(f"Time to fit the SVR model: {end - start} seconds")
+        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+        X_train, X_test = X_train.reset_index(drop=True), X_test.reset_index(drop=True)
+        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+        y_train, y_test = y_train.reset_index(drop=True), y_test.reset_index(drop=True)
+
+        scaler = StandardScaler()
+        X_train_transformed = scaler.fit_transform(X_train)
+        X_test_transformed = scaler.transform(X_test)
+
+        start = time.time()
+        model = SVR(**hyperparameters)
+        model.fit(X_train_transformed, y_train)
+
+        end = time.time()
+        print(f"Time to fit the SVR model: {end - start} seconds")
+
+        y_pred = model.predict(X_test)
+        y_true = y_test
+
+        print(f"MSE fold {fold}: {round(mean_squared_error(y_true, y_pred), 3)}")
+        print(f"MAE fold {fold}: {round(mean_absolute_error(y_true, y_pred), 3)}")
+        print(f"R^2 fold {fold}: {round(r2_score(y_true, y_pred), 3)}")
+        print(f"Spearman R fold {fold}: {round(spearmanr(y_true, y_pred), 3)}")
