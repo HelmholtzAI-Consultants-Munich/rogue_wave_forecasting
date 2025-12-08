@@ -4,6 +4,7 @@
 
 import os
 import sys
+import time
 import pickle
 import argparse
 
@@ -100,10 +101,13 @@ def main():
 
     print("Running SVM regression with cross-validation...")
 
+    start = time.time()
     regressor = SVR()
     model, cv_results = utils.run_CV(
         regressor, hyperparameter_grid, num_cv, X_train_transformed, y_train_cat, y_train, n_jobs, verbose=2
     )
+    end = time.time()
+    print(f"Cross-validation took {end - start:.2f} seconds")
 
     print("Evaluating model parameter configurations...")
 
