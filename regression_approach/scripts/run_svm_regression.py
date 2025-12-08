@@ -51,12 +51,12 @@ def argument_parser():
         kernel = [kernel]
 
     if C is None:
-        C = [0.1, 1, 10]
+        C = [0.1, 1]
     else:
         C = [C]
 
     if gamma is None:
-        gamma = ["auto", 0.01, 0.1, 1]
+        gamma = [0.01, 0.1, 1]
     else:
         gamma = [gamma]
 

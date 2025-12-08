@@ -21,4 +21,4 @@ conda -V
 # Activate the Conda environment
 echo "Using Python:"
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -V
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_svm_regression.py --kernel rbf --C 1.0 --gamma 1 --epsilon 0.01
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_svm_regression.py
