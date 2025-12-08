@@ -84,7 +84,7 @@ for i in range(5):
         end = time.time()
         print(f"Time to fit the SVR model: {end - start} seconds")
 
-        y_pred = model.predict(X_test)
+        y_pred = model.predict(X_test_transformed)
         y_true = y_test
 
         print(f"MSE fold {fold}: {round(mean_squared_error(y_true, y_pred), 3)}")
