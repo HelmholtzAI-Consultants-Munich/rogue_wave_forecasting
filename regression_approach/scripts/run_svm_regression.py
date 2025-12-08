@@ -40,9 +40,9 @@ def argument_parser():
 
     args = parser.parse_args()
     kernel = args.kernel
-    C = parse_argument_type(args.C)
-    gamma = parse_argument_type(args.gamma)
-    epsilon = parse_argument_type(args.epsilon)
+    C = args.C
+    gamma = args.gamma
+    epsilon = args.epsilon
     num_cv = args.num_cv
 
     if kernel is None:
@@ -53,17 +53,17 @@ def argument_parser():
     if C is None:
         C = [0.1, 1]
     else:
-        C = [C]
+        C = [parse_argument_type(C)]
 
     if gamma is None:
         gamma = [0.01, 0.1, 1]
     else:
-        gamma = [gamma]
+        gamma = [parse_argument_type(gamma)]
 
     if epsilon is None:
         epsilon = [0.01, 0.1, 0.2]
     else:
-        epsilon = [epsilon]
+        epsilon = [parse_argument_type(epsilon)]
 
     return kernel, C, gamma, epsilon, num_cv
 
