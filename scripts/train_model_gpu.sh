@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=svm_trainig
-#SBATCH --output=svm_trainig.out
-#SBATCH --error=svm_trainig.err
+#SBATCH --job-name=train_svm
+#SBATCH --output=train_svm.out
+#SBATCH --error=train_svm.err
 #SBATCH --partition=gpu_p
 #SBATCH --qos=gpu_normal
-#SBATCH --ntasks=2          # Number of tasks
+#SBATCH --ntasks=1          # Number of tasks
 #SBATCH --cpus-per-task=1   # Number of CPU cores per task
 #SBATCH --mem=200GB         # Memory allocation
 #SBATCH --gres=gpu:1
@@ -21,4 +21,4 @@ conda -V
 # Activate the Conda environment
 echo "Using Python:"
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -V
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_svm_regression.py
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u train_svm.py

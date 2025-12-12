@@ -2,16 +2,13 @@
 # imports
 ############################################
 
-import os
 import sys
 import time
 import pickle
-import argparse
 
 import pandas as pd
 from thundersvm import SVR
 from sklearn.preprocessing import StandardScaler
-
 
 sys.path.append("./")
 sys.path.append("../scripts/")
@@ -23,65 +20,19 @@ import utils
 ############################################
 
 
-def parse_argument_type(arg_str):
-    try:
-        return float(arg_str)
-    except ValueError:
-        return arg_str
-
-
-def argument_parser():
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Run SVM regression.")
-    parser.add_argument("--kernel", help="Kernel type for SVM")
-    parser.add_argument("--C", help="Regularization parameter for SVM")
-    parser.add_argument("--gamma", help="Gamma parameter for SVM")
-    parser.add_argument("--epsilon", help="Epsilon parameter for SVM")
-    parser.add_argument("--num_cv", type=int, default=5, help="Number of cross-validation folds")
-
-    args = parser.parse_args()
-    kernel = args.kernel
-    C = args.C
-    gamma = args.gamma
-    epsilon = args.epsilon
-    num_cv = args.num_cv
-
-    if kernel is None:
-        kernel = ["rbf"]
-    else:
-        kernel = [kernel]
-
-    if C is None:
-        C = [0.1, 1]
-    else:
-        C = [parse_argument_type(C)]
-
-    if gamma is None:
-        gamma = [0.01, 0.1, 1]
-    else:
-        gamma = [parse_argument_type(gamma)]
-
-    if epsilon is None:
-        epsilon = [0.01, 0.1, 0.2]
-    else:
-        epsilon = [parse_argument_type(epsilon)]
-
-    return kernel, C, gamma, epsilon, num_cv
-
-
 def main():
 
-    print("Setup...")
+    print("Setup SVM...")
 
     # We set n_jobs=1 because thundersvm uses GPU.
     n_jobs = 1
-    kernel, C, gamma, epsilon, num_cv = argument_parser()
+    num_cv = 5
 
     hyperparameter_grid = {
-        "kernel": kernel,
-        "C": C,
-        "gamma": gamma,
-        "epsilon": epsilon,
+        "kernel": ["rbf"],
+        "C": [0.1, 1],
+        "gamma": [0.01, 0.1, 1],
+        "epsilon": [0.01, 0.1, 0.2],
     }
 
     print(hyperparameter_grid)
@@ -127,7 +78,7 @@ def main():
 
     print("Saving results...")
 
-    file_cv = f"../results/svm/cv_results_{gamma}_{epsilon}.csv"
+    file_cv = f"../results/svm/cv_results.csv"
     cv_results.to_csv(file_cv)
 
     data_train = pd.DataFrame(X_train_transformed, columns=X_train.columns)
@@ -140,19 +91,19 @@ def main():
 
     data_and_model = [data_train, data_test, model]
 
-    file_data_model = f"../results/svm/model_and_data_{gamma}_{epsilon}.pickle"
+    file_data_model = f"../results/svm/model_and_data.pickle"
     with open(file_data_model, "wb") as handle:
         pickle.dump(data_and_model, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     print(utils.get_model_size(model))
 
     performance_train = [y_true_train, y_pred_train, mse_train, mae_train, r2_train, spearman_r_train]
-    file_performance_train = f"../results/svm/performance_train_{gamma}_{epsilon}.pickle"
+    file_performance_train = f"../results/svm/performance_train.pickle"
     with open(file_performance_train, "wb") as handle:
         pickle.dump(performance_train, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     performance_test = [y_true_test, y_pred_test, mse_test, mae_test, r2_test, spearman_r_test]
-    file_performance_test = f"../results/svm/performance_test_{gamma}_{epsilon}.pickle"
+    file_performance_test = f"../results/svm/performance_test.pickle"
     with open(file_performance_test, "wb") as handle:
         pickle.dump(performance_test, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
