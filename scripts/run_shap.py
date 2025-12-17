@@ -27,7 +27,6 @@ seed = 42
 
 
 def argument_parser():
-    # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Run SHAP.")
     parser.add_argument("--batch_size", type=int, default=100, help="Batch size for SHAP computation")
     parser.add_argument("--last_batch", type=int, default=-1, help="Last batch index processed for resuming")
@@ -64,15 +63,12 @@ def argument_parser():
 
 
 def subsample(X, y, y_cat, n_samples, random_state=42):
-    # Combine features and labels into one DataFrame
     df = X.copy()
     df["target"] = y
     df["target_class"] = y_cat
 
-    # Compute stratified sample sizes per class
     sample_sizes = df["target_class"].value_counts(normalize=True).mul(n_samples).round().astype(int)
 
-    # Perform stratified sampling
     sampled_df = pd.concat(
         [
             group.sample(n=sample_sizes[cls], random_state=random_state)
@@ -81,37 +77,48 @@ def subsample(X, y, y_cat, n_samples, random_state=42):
         ]
     )
 
-    # Drop helper columns
+    data_subsampled_target = sampled_df["target"]
     data_subsampled = sampled_df.drop(columns=["target", "target_class"])
 
-    return data_subsampled
+    return data_subsampled, data_subsampled_target
 
 
 def get_datasets(X_train, y_train, y_train_cat, X_test, y_test, y_test_cat, dataset, n_samples, n_background):
     def _get_dataset(X, y, y_cat, dataset, n_samples):
         if (n_samples is not None and n_samples > X.shape[0]) or n_samples is None:
             data = X
+            data_y = y
         else:
-            data = subsample(X, y, y_cat, n_samples)
+            data, data_y = subsample(X, y, y_cat, n_samples)
         print(f"Using {data.shape[0]} {dataset} samples of {X.shape[0]} in total.")
-        return data
+        return data, data_y
 
-    data_background = _get_dataset(X_train, y_train, y_train_cat, "background", n_background)
+    data_background, data_background_y = _get_dataset(
+        X_train, y_train, y_train_cat, "background", n_background
+    )
 
     if dataset == "train":
-        data_shap = _get_dataset(X_train, y_train, y_train_cat, dataset, n_samples)
+        data_shap, data_shap_y = _get_dataset(X_train, y_train, y_train_cat, dataset, n_samples)
 
     elif dataset == "test":
-        data_shap = _get_dataset(X_test, y_test, y_test_cat, dataset, n_samples)
+        data_shap, data_shap_y = _get_dataset(X_test, y_test, y_test_cat, dataset, n_samples)
 
-    return data_background, data_shap
+    return data_background, data_background_y, data_shap, data_shap_y
 
 
 def _init_worker(model, data_background, model_type):
     global _global_model, _explainer
     _global_model = model
 
-    if model_type == "RF" or model_type == "XGB":
+    if model_type == "Linear":
+        print("Using LinearExplainer for linear models.")
+        _explainer = shap.LinearExplainer(
+            model=_global_model,
+            data=data_background,
+            masker=shap.maskers.Independent(data_background, max_samples=data_background.shape[0]),
+            feature_perturbation="correlation_dependent",
+        )
+    elif model_type == "RF" or model_type == "XGB":
         print("Using TreeExplainer for tree-based models.")
         _explainer = shap.TreeExplainer(
             model=_global_model,
@@ -155,7 +162,8 @@ def _process_batch(args):
 def run_shap(
     model,
     data_background,
-    data,
+    data_shap,
+    data_shap_y,
     last_batch,
     batch_size,
     dataset,
@@ -163,24 +171,21 @@ def run_shap(
     dir_output,
     n_jobs,
 ):
-    # Parallel SHAP computation
     print("Setup SHAP computation.")
     batches = []
-    for i in range(0, len(data), batch_size):
+    for i in range(0, len(data_shap), batch_size):
         if i > last_batch:
-            X_batch = data[i : i + batch_size]
+            X_batch = data_shap[i : i + batch_size]
             if model_type == "DL":
                 X_batch = X_batch.values if isinstance(X_batch, pd.DataFrame) else X_batch
             batches.append((i, X_batch, dir_output, dataset))
 
     if n_jobs == 1:
-        # No multiprocessing: run sequentially
         print("Sequential batch SHAP computation...")
         _init_worker(model, data_background, model_type)
         for args in tqdm(batches, total=len(batches)):
             _process_batch(args)
     else:
-        # Use multiprocessing
         print("Parallel batch SHAP computation...")
         with Pool(
             processes=n_jobs,
@@ -189,11 +194,10 @@ def run_shap(
         ) as pool:
             list(tqdm(pool.imap(_process_batch, batches), total=len(batches)))
 
-    # Aggregate SHAP Results
     print("Aggregate SHAP values...")
     shap_values = []
 
-    for i in tqdm(range(0, len(data), batch_size)):
+    for i in tqdm(range(0, len(data_shap), batch_size)):
         file_shap_batch = os.path.join(dir_output, f"{dataset}_shap_batch{i}.pkl")
         with open(file_shap_batch, "rb") as handle:
             shap_values_batch = pickle.load(handle)
@@ -202,21 +206,18 @@ def run_shap(
         shap_values.append(shap_values_batch)
         os.remove(file_shap_batch)
 
-    # Combine results
     shap_values = np.concatenate(shap_values, axis=0)
 
-    # Base value (model expected value)
-    expected_value = model.predict(data).mean()
+    expected_value = model.predict(data_shap).mean()
 
-    # Create SHAP Explanation
     explanation = shap.Explanation(
         values=shap_values,
-        base_values=np.full(len(data), expected_value),
-        data=data.values,
-        feature_names=data.columns.tolist(),
+        base_values=np.full(len(data_shap), expected_value),
+        data=data_shap.values,
+        feature_names=data_shap.columns.tolist(),
     )
+    explanation.custom = {"target": data_shap_y}
 
-    # Save object to a pickle file
     file_shap = os.path.join(dir_output, f"{dataset}_shap.pkl")
     with open(file_shap, "wb") as f:
         pickle.dump(explanation, f)
@@ -239,6 +240,7 @@ def main():
     print(f"Run SHAP on last_batch={last_batch}, dataset={dataset}, model_type={model_type}")
 
     n_jobs_available = int(os.environ.get("SLURM_CPUS_ON_NODE", 1))
+    n_jobs = min(n_jobs, n_jobs_available)
     print(f"Detected {n_jobs_available} CPU cores via SLURM. Using n_jobs={n_jobs} for SHAP computation.")
 
     print("Loading data and model...")
@@ -252,11 +254,10 @@ def main():
 
     print(f"Predicting a single sample: {prediction}, which took {end - start:.6f} seconds")
 
-    # For XGB, set n_jobs=1 to avoid conflicts with multiprocessing
     if model_type == "XGB":
         model.set_params(n_jobs=1)
 
-    data_background, data = get_datasets(
+    data_background, data_background_y, data_shap, data_shap_y = get_datasets(
         X_train, y_train, y_train_cat, X_test, y_test, y_test_cat, dataset, n_dataset, n_background
     )
 
@@ -266,7 +267,8 @@ def main():
     file_shap = run_shap(
         model=model,
         data_background=data_background,
-        data=data,
+        data_shap=data_shap,
+        data_shap_y=data_shap_y,
         last_batch=last_batch,
         batch_size=batch_size,
         dataset=dataset,

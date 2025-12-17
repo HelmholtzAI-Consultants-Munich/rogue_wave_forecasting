@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=rf_shap
-#SBATCH --output=rf_shap.out
-#SBATCH --error=rf_shap.err
+#SBATCH --job-name=shap_rf
+#SBATCH --output=shap_rf.out
+#SBATCH --error=shap_rf.err
 #SBATCH --partition=cpu_p
 #SBATCH --qos=cpu_normal
-#SBATCH --ntasks=16          # Number of tasks
-#SBATCH --cpus-per-task=1    # Number of CPU cores
-#SBATCH --mem=100GB          # Memory allocation
+#SBATCH --ntasks=1          
+#SBATCH --cpus-per-task=16    
+#SBATCH --mem=100GB          
 
 # Ensure Conda is in the PATH
 export PATH=~/anaconda3/bin:$PATH
@@ -20,5 +20,5 @@ conda -V
 # Activate the Conda environment
 echo "Using Python:"
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -V
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --batch_size 100 --last_batch -1 --dataset test --n_dataset 40000 --n_background 2000 --model_type RF --file_data_model ../results/rf/model_and_data.pickle --dir_output /lustre/groups/aiconsultants/workspace/lisa.barros/shap/rf/
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --batch_size 100 --last_batch -1 --dataset train --n_dataset 160000 --n_background 2000 --model_type RF --file_data_model ../results/rf/model_and_data.pickle --dir_output /lustre/groups/aiconsultants/workspace/lisa.barros/shap/rf/
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --batch_size 100 --last_batch -1 --dataset test --n_dataset 40000 --n_background 2000 --model_type RF --file_data_model ../results/rf/model_and_data.pkl --dir_output ../results/rf/ --n_jobs 16
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --batch_size 100 --last_batch -1 --dataset train --n_dataset 160000 --n_background 2000 --model_type RF --file_data_model ../results/rf/model_and_data.pkl --dir_output ../results/rf/ --n_jobs 16
