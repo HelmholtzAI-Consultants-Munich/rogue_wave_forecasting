@@ -4,10 +4,12 @@
 #SBATCH --error=train_svm.err
 #SBATCH --partition=gpu_p
 #SBATCH --qos=gpu_normal
+#SBATCH --gres=gpu:1
+#SBATCH --nodes=1
+#SBATCH --nodelist=supergpu[02-33]
 #SBATCH --ntasks=1          
 #SBATCH --cpus-per-task=1   
-#SBATCH --mem=200GB         
-#SBATCH --gres=gpu:1
+#SBATCH --mem=300GB  
 
 # Ensure Conda is in the PATH
 export PATH=~/anaconda3/bin:$PATH

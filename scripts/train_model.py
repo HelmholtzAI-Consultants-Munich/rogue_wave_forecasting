@@ -51,7 +51,7 @@ def get_hyperparameter_grid(model_type):
     elif model_type == "svm":
         hyperparameter_grid = {
             "kernel": ["rbf"],
-            "C": [0.1, 1],
+            "C": [0.1, 1, 10],
             "gamma": [0.01, 0.1, 1],
             "epsilon": [0.01, 0.1, 0.2],
         }
