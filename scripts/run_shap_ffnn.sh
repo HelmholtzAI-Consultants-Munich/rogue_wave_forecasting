@@ -20,5 +20,5 @@ conda -V
 # Activate the Conda environment
 echo "Using Python:"
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -V
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --batch_size 100 --last_batch -1 --dataset test --n_dataset 40000 --n_background 2000 --model_type DL --file_data_model ../results/ffnn/model_and_data.pkl --dir_output ../results/ffnn/ --n_jobs 1
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --batch_size 100 --last_batch -1 --dataset train --n_dataset 160000 --n_background 2000 --model_type DL --file_data_model ../results/ffnn/model_and_data.pkl --dir_output ../results/ffnn/ --n_jobs 1
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --batch_size 100 --last_batch -1 --dataset test --n_dataset 40000 --n_background 2000 --model_type DL --file_data_model ../results/ffnn/model_and_data.pkl --dir_output /lustre/groups/aiconsultants/workspace/lisa.barros/shap_ffnn/ --n_jobs 1
+/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py --batch_size 100 --last_batch -1 --dataset train --n_dataset 160000 --n_background 2000 --model_type DL --file_data_model ../results/ffnn/model_and_data.pkl --dir_output /lustre/groups/aiconsultants/workspace/lisa.barros/shap_ffnn/ --n_jobs 1
