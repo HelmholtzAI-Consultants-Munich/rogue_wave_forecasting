@@ -167,6 +167,9 @@ def train(model_type, file_data, dir_output, n_jobs):
 
     print(cv_results)
 
+    if model_type == "svm":
+        store_predictions(model, X_train, y_train, X_test, y_test, dir_output)
+
     data_train = X_train
     data_train["AI_10min"] = y_train
     data_train["AI_10min_cat"] = y_train_cat
@@ -182,9 +185,6 @@ def train(model_type, file_data, dir_output, n_jobs):
         pickle.dump(data_and_model, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     utils.get_model_size(model)
-
-    if model_type == "svm":
-        store_predictions(model, X_train, y_train, X_test, y_test, dir_output)
 
     print("Done.")
 
