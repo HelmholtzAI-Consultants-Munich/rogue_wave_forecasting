@@ -111,6 +111,7 @@ def store_predictions(model, X_train, y_train, X_test, y_test, dir_output):
     file_performance_train = f"{dir_output}/performance_train.pkl"
     with open(file_performance_train, "wb") as handle:
         pickle.dump(performance_train, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    print(f"Training set performance: r2={r2_train}, spearman_r={spearman_r_train}")
 
     y_true_test, y_pred_test, mse_test, mae_test, r2_test, spearman_r_test = utils.evaluate_best_regressor(
         model, X_test, y_test, dataset="Test", plot=False
@@ -119,6 +120,7 @@ def store_predictions(model, X_train, y_train, X_test, y_test, dir_output):
     file_performance_test = f"{dir_output}/performance_test.pkl"
     with open(file_performance_test, "wb") as handle:
         pickle.dump(performance_test, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    print(f"Test set performance: r2={r2_test}, spearman_r={spearman_r_test}")
 
 
 def train(model_type, file_data, dir_output, n_jobs):
