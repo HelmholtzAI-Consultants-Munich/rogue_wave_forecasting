@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=shap_svm_%a
-#SBATCH --output=shap_svm_%a.out
-#SBATCH --error=shap_svm_%a.err
+#SBATCH --job-name=shap_svm_train_%a
+#SBATCH --output=shap_svm_train_%a.out
+#SBATCH --error=shap_svm_train_%a.err
 #SBATCH --partition=gpu_p
 #SBATCH --qos=gpu_normal
 #SBATCH --gres=gpu:1
@@ -10,7 +10,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=300GB
-#SBATCH --array=0-39%15   # 40 bins total, max 15 running at once
+#SBATCH --array=0-159%5   # 40 bins total, max 5 running at once
 
 # Determine last_batch based on SLURM_ARRAY_TASK_ID
 if [ "$SLURM_ARRAY_TASK_ID" -eq 0 ]; then
@@ -37,8 +37,8 @@ echo "Using Python:"
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py \
   --batch_size 100 \
   --last_batch "${LAST_BATCH}" \
-  --dataset test \
-  --n_dataset 40000 \
+  --dataset train \
+  --n_dataset 160000 \
   --n_background 1000 \
   --model_type Kernel \
   --file_data_model ../results/svm/model_and_data.pkl \
