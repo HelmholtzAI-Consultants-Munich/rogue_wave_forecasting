@@ -13,9 +13,9 @@ Data preparation, model training, evaluation, and stability studies.
 
 1. **00_data_processing.ipynb** cleans data, selects features, and exports the modelling matrix.
 2. **01_linear_regression.ipynb** train, evaluate and interpret ELasticNet model with SHAP
-3. **02_random_forest_regression.ipynb** train, evaluate and interpret Random Forest model with SHAP
-4. **03_xg_boost_regression.ipynb** train, evaluate and interpret XGBoost model with SHAP
-5. **04_svm_regression.ipynb** train, evaluate and interpret SVM model with SHAP
+3. **02_svm_regression.ipynb** train, evaluate and interpret SVM model with SHAP
+4. **03_random_forest_regression.ipynb** train, evaluate and interpret Random Forest model with SHAP
+5. **04_xg_boost_regression.ipynb** train, evaluate and interpret XGBoost model with SHAP
 6. **05_ffnn_regression.ipynb** train, evaluate and interpret feed-foreward neural network model with SHAP
 7. **06_summary.ipynb** consolidates metrics and compares model explanations.
 8. **07_stbility_and_performance.ipynb** stress-tests the chosen XGBoost model with stratified folds.
