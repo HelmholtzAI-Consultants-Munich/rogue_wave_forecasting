@@ -204,6 +204,9 @@ def run_shap(
         if model_type == "DL":
             shap_values_batch = shap_values_batch.squeeze(-1)
         shap_values.append(shap_values_batch)
+
+    for i in range(0, len(data_shap), batch_size):
+        file_shap_batch = os.path.join(dir_output, f"{dataset}_shap_batch{i}.pkl")
         os.remove(file_shap_batch)
 
     shap_values = np.concatenate(shap_values, axis=0)

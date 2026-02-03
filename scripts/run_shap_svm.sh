@@ -10,36 +10,57 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=300GB
-#SBATCH --array=0-159%5   # 40 bins total, max 5 running at once
+#SBATCH --array=0-1599%5   # 1600 batches × 100 = 160000 samples
 
-# Determine last_batch based on SLURM_ARRAY_TASK_ID
-if [ "$SLURM_ARRAY_TASK_ID" -eq 0 ]; then
-    LAST_BATCH=-1
-else
-    LAST_BATCH=$(( SLURM_ARRAY_TASK_ID * 1000 ))
+# -------------------------------
+# Batch configuration
+# -------------------------------
+BATCH_SIZE=100
+DATASET="train"
+N_DATASET=160000
+OUTPUT_DIR="/lustre/groups/aiconsultants/workspace/lisa.barros/shap_svm"
+
+BATCH_START=$(( SLURM_ARRAY_TASK_ID * BATCH_SIZE ))
+
+echo "Array task ID     : $SLURM_ARRAY_TASK_ID"
+echo "Batch start index : $BATCH_START"
+
+# -------------------------------
+# Skip if batch already computed
+# -------------------------------
+OUTPUT_FILE="${OUTPUT_DIR}/${DATASET}_shap_batch${BATCH_START}.pkl"
+
+if [ -f "$OUTPUT_FILE" ]; then
+    echo "$(date) | Output already exists, skipping batch ${BATCH_START}"
+
+    rm -f "shap_svm_${DATASET}_${SLURM_ARRAY_TASK_ID}.out" \
+          "shap_svm_${DATASET}_${SLURM_ARRAY_TASK_ID}.err"
+
+    exit 0
 fi
 
-echo "Array task ID: $SLURM_ARRAY_TASK_ID"
-echo "Using last_batch = $LAST_BATCH"
-
-# Ensure Conda is in the PATH
+# -------------------------------
+# Conda setup
+# -------------------------------
 export PATH=~/anaconda3/bin:$PATH
 export LD_LIBRARY_PATH=~/anaconda3/lib:$LD_LIBRARY_PATH
 
-# Initialize Conda in the script 
 source ~/anaconda3/etc/profile.d/conda.sh
 echo "Using Conda:"
-conda -V 
+conda -V
 
-# Use your env's Python
 echo "Using Python:"
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -V
+
+# -------------------------------
+# Run SHAP computation (ONE batch)
+# -------------------------------
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py \
-  --batch_size 100 \
-  --last_batch "${LAST_BATCH}" \
-  --dataset train \
-  --n_dataset 160000 \
+  --batch_size "${BATCH_SIZE}" \
+  --last_batch "${BATCH_START}" \
+  --dataset "${DATASET}" \
+  --n_dataset "${N_DATASET}" \
   --n_background 1000 \
   --model_type Kernel \
   --file_data_model ../results/svm/model_and_data.pkl \
-  --dir_output /lustre/groups/aiconsultants/workspace/lisa.barros/shap_svm/
+  --dir_output "${OUTPUT_DIR}"
