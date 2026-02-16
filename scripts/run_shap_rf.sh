@@ -22,7 +22,7 @@ echo "Using Python:"
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -V
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py  \
     --batch_size 100  \
-    --last_batch -1  \
+    --batch_multiprocessing  \
     --dataset test  \
     --n_dataset 40000  \
     --n_background 2000  \
@@ -32,7 +32,7 @@ echo "Using Python:"
     --n_jobs 50
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py  \
     --batch_size 100  \
-    --last_batch -1  \
+    --batch_multiprocessing  \
     --dataset train  \
     --n_dataset 160000  \
     --n_background 2000  \

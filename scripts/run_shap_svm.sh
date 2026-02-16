@@ -57,8 +57,7 @@ echo "Using Python:"
 # -------------------------------
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py \
   --batch_size "${BATCH_SIZE}" \
-  --last_batch "${BATCH_START}" \
-  --multi_batch False \
+  --batch_number "${BATCH_START}" \
   --dataset "${DATASET}" \
   --n_dataset "${N_DATASET}" \
   --n_background 1000 \

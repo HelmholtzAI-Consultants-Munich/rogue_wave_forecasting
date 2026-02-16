@@ -29,13 +29,19 @@ seed = 42
 def argument_parser():
     parser = argparse.ArgumentParser(description="Run SHAP.")
     parser.add_argument("--batch_size", type=int, default=100, help="Batch size for SHAP computation")
-    parser.add_argument("--last_batch", type=int, default=-1, help="Last batch index processed for resuming")
     parser.add_argument(
-        "--multi_batch",
-        type=bool,
-        default=True,
-        help="Whether to compute SHAP values in multiple batches or a single batch",
+        "--batch_multiprocessing",
+        action="store_true",
+        help="Enable multiprocessing for SHAP batches",
     )
+
+    parser.add_argument(
+        "--batch_number",
+        type=int,
+        default=0,
+        help="Batch number to compute when batch_multiprocessing is False",
+    )
+
     parser.add_argument("--dataset", type=str, help="Using 'train' or 'test' dataset")
     parser.add_argument("--n_dataset", type=int, default=None, help="Number of samples for SHAP computation")
     parser.add_argument("--n_background", type=int, default=None, help="Num. samples for background dataset")
@@ -46,8 +52,8 @@ def argument_parser():
 
     args = parser.parse_args()
     batch_size = args.batch_size
-    last_batch = args.last_batch
-    multi_batch = args.multi_batch
+    batch_multiprocessing = args.batch_multiprocessing
+    batch_number = args.batch_number
     dataset = args.dataset
     n_dataset = args.n_dataset
     n_background = args.n_background
@@ -58,8 +64,8 @@ def argument_parser():
 
     return (
         batch_size,
-        last_batch,
-        multi_batch,
+        batch_multiprocessing,
+        batch_number,
         dataset,
         n_dataset,
         n_background,
@@ -172,9 +178,9 @@ def run_shap(
     data_background,
     data_shap,
     data_shap_y,
-    multi_batch,
-    last_batch,
     batch_size,
+    batch_multiprocessing,
+    batch_number,
     dataset,
     model_type,
     dir_output,
@@ -182,15 +188,20 @@ def run_shap(
 ):
     print("Setup SHAP computation.")
     batches = []
-    for i in range(0, len(data_shap), batch_size):
-        if i > last_batch and not os.path.exists(os.path.join(dir_output, f"{dataset}_shap_batch{i}.pkl")):
-            print(f"Adding batch {i} to processing queue.")
-            X_batch = data_shap[i : i + batch_size]
-            if model_type == "DL":
-                X_batch = X_batch.values if isinstance(X_batch, pd.DataFrame) else X_batch
-            batches.append((i, X_batch, dir_output, dataset))
-            if multi_batch == False:
-                break
+    if batch_multiprocessing:
+        for i in range(0, len(data_shap), batch_size):
+            if not os.path.exists(os.path.join(dir_output, f"{dataset}_shap_batch{i}.pkl")):
+                X_batch = data_shap[i : i + batch_size]
+                if model_type == "DL":
+                    X_batch = X_batch.values if isinstance(X_batch, pd.DataFrame) else X_batch
+                batches.append((i, X_batch, dir_output, dataset))
+                print(f"Adding batch {i} to processing queue.")
+    else:
+        X_batch = data_shap[batch_number : batch_number + batch_size]
+        if model_type == "DL":
+            X_batch = X_batch.values if isinstance(X_batch, pd.DataFrame) else X_batch
+        batches.append((batch_number, X_batch, dir_output, dataset))
+        print(f"Adding batch {batch_number} to processing queue.")
 
     if batches:
         if n_jobs == 1:
@@ -251,8 +262,8 @@ def run_shap(
 def main():
     (
         batch_size,
-        last_batch,
-        multi_batch,
+        batch_multiprocessing,
+        batch_number,
         dataset,
         n_dataset,
         n_background,
@@ -262,7 +273,7 @@ def main():
         dir_output,
     ) = argument_parser()
     print(
-        f"Run SHAP on last_batch={last_batch}, multi_batch={multi_batch}, dataset={dataset}, model_type={model_type}"
+        f"Run SHAP on batch_multiprocessing={batch_multiprocessing}, dataset={dataset}, model_type={model_type}"
     )
 
     n_jobs_available = int(os.environ.get("SLURM_CPUS_ON_NODE", 1))
@@ -295,9 +306,9 @@ def main():
         data_background=data_background,
         data_shap=data_shap,
         data_shap_y=data_shap_y,
-        multi_batch=multi_batch,
-        last_batch=last_batch,
         batch_size=batch_size,
+        batch_multiprocessing=batch_multiprocessing,
+        batch_number=batch_number,
         dataset=dataset,
         model_type=model_type,
         dir_output=dir_output,
