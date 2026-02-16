@@ -30,6 +30,12 @@ def argument_parser():
     parser = argparse.ArgumentParser(description="Run SHAP.")
     parser.add_argument("--batch_size", type=int, default=100, help="Batch size for SHAP computation")
     parser.add_argument("--last_batch", type=int, default=-1, help="Last batch index processed for resuming")
+    parser.add_argument(
+        "--multi_batch",
+        type=bool,
+        default=True,
+        help="Whether to compute SHAP values in multiple batches or a single batch",
+    )
     parser.add_argument("--dataset", type=str, help="Using 'train' or 'test' dataset")
     parser.add_argument("--n_dataset", type=int, default=None, help="Number of samples for SHAP computation")
     parser.add_argument("--n_background", type=int, default=None, help="Num. samples for background dataset")
@@ -41,6 +47,7 @@ def argument_parser():
     args = parser.parse_args()
     batch_size = args.batch_size
     last_batch = args.last_batch
+    multi_batch = args.multi_batch
     dataset = args.dataset
     n_dataset = args.n_dataset
     n_background = args.n_background
@@ -52,6 +59,7 @@ def argument_parser():
     return (
         batch_size,
         last_batch,
+        multi_batch,
         dataset,
         n_dataset,
         n_background,
@@ -164,6 +172,7 @@ def run_shap(
     data_background,
     data_shap,
     data_shap_y,
+    multi_batch,
     last_batch,
     batch_size,
     dataset,
@@ -174,25 +183,36 @@ def run_shap(
     print("Setup SHAP computation.")
     batches = []
     for i in range(0, len(data_shap), batch_size):
-        if i > last_batch:
+        if i > last_batch and not os.path.exists(os.path.join(dir_output, f"{dataset}_shap_batch{i}.pkl")):
+            print(f"Adding batch {i} to processing queue.")
             X_batch = data_shap[i : i + batch_size]
             if model_type == "DL":
                 X_batch = X_batch.values if isinstance(X_batch, pd.DataFrame) else X_batch
             batches.append((i, X_batch, dir_output, dataset))
+            if multi_batch == False:
+                break
 
-    if n_jobs == 1:
-        print("Sequential batch SHAP computation...")
-        _init_worker(model, data_background, model_type)
-        for args in tqdm(batches, total=len(batches)):
-            _process_batch(args)
-    else:
-        print("Parallel batch SHAP computation...")
-        with Pool(
-            processes=n_jobs,
-            initializer=_init_worker,
-            initargs=(model, data_background, model_type),
-        ) as pool:
-            list(tqdm(pool.imap(_process_batch, batches), total=len(batches)))
+    if batches:
+        if n_jobs == 1:
+            print("Sequential batch SHAP computation...")
+            _init_worker(model, data_background, model_type)
+            for args in tqdm(batches, total=len(batches)):
+                _process_batch(args)
+        else:
+            print("Parallel batch SHAP computation...")
+            with Pool(
+                processes=n_jobs,
+                initializer=_init_worker,
+                initargs=(model, data_background, model_type),
+            ) as pool:
+                list(tqdm(pool.imap(_process_batch, batches), total=len(batches)))
+
+    for i in range(0, len(data_shap), batch_size):
+        file_shap_batch = os.path.join(dir_output, f"{dataset}_shap_batch{i}.pkl")
+        if not os.path.exists(file_shap_batch):
+            raise FileNotFoundError(
+                f"Expected SHAP batch file not found: {file_shap_batch}, cannot proceed with aggregation."
+            )
 
     print("Aggregate SHAP values...")
     shap_values = []
@@ -204,10 +224,6 @@ def run_shap(
         if model_type == "DL":
             shap_values_batch = shap_values_batch.squeeze(-1)
         shap_values.append(shap_values_batch)
-
-    for i in range(0, len(data_shap), batch_size):
-        file_shap_batch = os.path.join(dir_output, f"{dataset}_shap_batch{i}.pkl")
-        os.remove(file_shap_batch)
 
     shap_values = np.concatenate(shap_values, axis=0)
 
@@ -225,6 +241,10 @@ def run_shap(
     with open(file_shap, "wb") as f:
         pickle.dump(explanation, f)
 
+    for i in range(0, len(data_shap), batch_size):
+        file_shap_batch = os.path.join(dir_output, f"{dataset}_shap_batch{i}.pkl")
+        os.remove(file_shap_batch)
+
     return file_shap
 
 
@@ -232,6 +252,7 @@ def main():
     (
         batch_size,
         last_batch,
+        multi_batch,
         dataset,
         n_dataset,
         n_background,
@@ -240,7 +261,9 @@ def main():
         n_jobs,
         dir_output,
     ) = argument_parser()
-    print(f"Run SHAP on last_batch={last_batch}, dataset={dataset}, model_type={model_type}")
+    print(
+        f"Run SHAP on last_batch={last_batch}, multi_batch={multi_batch}, dataset={dataset}, model_type={model_type}"
+    )
 
     n_jobs_available = int(os.environ.get("SLURM_CPUS_ON_NODE", 1))
     n_jobs = min(n_jobs, n_jobs_available)
@@ -272,6 +295,7 @@ def main():
         data_background=data_background,
         data_shap=data_shap,
         data_shap_y=data_shap_y,
+        multi_batch=multi_batch,
         last_batch=last_batch,
         batch_size=batch_size,
         dataset=dataset,

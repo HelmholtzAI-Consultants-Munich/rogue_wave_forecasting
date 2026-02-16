@@ -10,7 +10,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=300GB
-#SBATCH --array=0-1599%5   # 1600 batches × 100 = 160000 samples
+#SBATCH --array=0-1599%10   # 1600 batches × 100 = 160000 samples
 
 # -------------------------------
 # Batch configuration
@@ -58,6 +58,7 @@ echo "Using Python:"
 /home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py \
   --batch_size "${BATCH_SIZE}" \
   --last_batch "${BATCH_START}" \
+  --multi_batch False \
   --dataset "${DATASET}" \
   --n_dataset "${N_DATASET}" \
   --n_background 1000 \
