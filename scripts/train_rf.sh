@@ -19,8 +19,8 @@ conda -V
 
 # Activate the Conda environment
 echo "Using Python:"
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -V
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u train_model.py  \
+~/anaconda3/envs/rogue_wave/bin/python -V
+~/anaconda3/envs/rogue_wave/bin/python -u train_model.py  \
     --model_type rf  \
     --file_data ../data/data_train_test.pickle  \
     --dir_output ../results/rf/  \

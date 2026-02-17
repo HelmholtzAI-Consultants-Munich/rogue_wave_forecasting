@@ -19,8 +19,8 @@ conda -V
 
 # Activate the Conda environment
 echo "Using Python:"
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -V
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py  \
+~/anaconda3/envs/rogue_wave/bin/python -V
+~/anaconda3/envs/rogue_wave/bin/python -u run_shap.py  \
     --batch_size 100  \
     --batch_multiprocessing  \
     --dataset test  \
@@ -28,9 +28,9 @@ echo "Using Python:"
     --n_background 2000  \
     --model_type RF  \
     --file_data_model ../results/rf/model_and_data.pkl  \
-    --dir_output /lustre/groups/aiconsultants/workspace/lisa.barros/shap_rf/  \
+    --dir_output ../results/rf/shap_rf/  \
     --n_jobs 50
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py  \
+~/anaconda3/envs/rogue_wave/bin/python -u run_shap.py  \
     --batch_size 100  \
     --batch_multiprocessing  \
     --dataset train  \
@@ -38,5 +38,5 @@ echo "Using Python:"
     --n_background 2000  \
     --model_type RF  \
     --file_data_model ../results/rf/model_and_data.pkl  \
-    --dir_output /lustre/groups/aiconsultants/workspace/lisa.barros/shap_rf/  \
+    --dir_output ../results/rf/shap_rf/  \
     --n_jobs 50

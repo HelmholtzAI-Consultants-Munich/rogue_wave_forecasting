@@ -18,7 +18,7 @@
 BATCH_SIZE=100
 DATASET="train"
 N_DATASET=160000
-OUTPUT_DIR="/lustre/groups/aiconsultants/workspace/lisa.barros/shap_svm"
+OUTPUT_DIR="../results/svm/shap_svm"
 
 BATCH_START=$(( SLURM_ARRAY_TASK_ID * BATCH_SIZE ))
 
@@ -50,12 +50,12 @@ echo "Using Conda:"
 conda -V
 
 echo "Using Python:"
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -V
+~/anaconda3/envs/rogue_wave/bin/python -V
 
 # -------------------------------
 # Run SHAP computation (ONE batch)
 # -------------------------------
-/home/haicu/lisa.barros/anaconda3/envs/rogue_wave/bin/python -u run_shap.py \
+~/anaconda3/envs/rogue_wave/bin/python -u run_shap.py \
   --batch_size "${BATCH_SIZE}" \
   --batch_number "${BATCH_START}" \
   --dataset "${DATASET}" \
