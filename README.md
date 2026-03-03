@@ -47,7 +47,7 @@ Due to size of the files, the content of this folder is provided along the relea
 ## Reproducing the Experiments
 
 ```
-conda create -n rogue_wave python=3.11
+conda create -n rogue_wave python=3.13
 conda activate rogue_wave
 pip install -r requirements.txt
 ```
