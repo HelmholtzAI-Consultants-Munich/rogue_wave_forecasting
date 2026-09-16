@@ -15,47 +15,13 @@ import seaborn as sns
 
 from collections import Counter
 
-from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from scipy.stats import spearmanr
 
 ############################################################
 ##### Utility Functions
 ############################################################
-
-
-def plot_distributions(dataset, ncols):
-
-    nrows = int(np.ceil(len(dataset.columns) / ncols))
-
-    plt.figure(figsize=(ncols * 4.5, nrows * 4.5))
-    plt.subplots_adjust(top=0.95, hspace=0.8, wspace=0.8)
-    plt.suptitle("Distribution of features")
-
-    for n, feature in enumerate(dataset.columns):
-        # add a new subplot iteratively
-        ax = plt.subplot(nrows, ncols, n + 1)
-        if dataset[feature].nunique() < 5 or isinstance(dataset[feature].dtype, pd.CategoricalDtype):
-            sns.countplot(
-                data=dataset,
-                x=feature,
-                hue=feature,
-                palette="Blues_r",
-                ax=ax,
-            )
-            # ax.legend(bbox_to_anchor=(1, 1), loc=2)
-        else:
-            sns.histplot(
-                data=dataset,
-                x=feature,
-                bins=30,
-                ax=ax,
-                color="#3470a3",
-            )
-
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
 
 
 def load_data(file_data):
@@ -81,32 +47,6 @@ def load_data(file_data):
     print(Counter(data_test["AI_10min_cat"]))
 
     return data_train, data_test, y_train, y_train_cat, X_train, y_test, y_test_cat, X_test
-
-
-def run_CV(model, hyperparameter_grid, num_cv, X, y_train_cat, y_train, n_jobs, verbose=0):
-    # Tune hyperparameters
-    skf = StratifiedKFold(n_splits=num_cv).split(X, y_train_cat)
-
-    gridsearch_classifier = GridSearchCV(model, hyperparameter_grid, cv=skf, n_jobs=n_jobs, verbose=verbose)
-
-    if isinstance(model, ClassifierMixin):
-        gridsearch_classifier.fit(X, y_train_cat)
-    elif isinstance(model, RegressorMixin):
-        gridsearch_classifier.fit(X, y_train)
-
-    # Take the best estimator
-    model = gridsearch_classifier.best_estimator_
-
-    # Collect CV Results
-    cv_results = pd.concat(
-        [
-            pd.DataFrame(gridsearch_classifier.cv_results_["params"]),
-            pd.DataFrame(gridsearch_classifier.cv_results_["mean_test_score"], columns=["score"]),
-        ],
-        axis=1,
-    )
-
-    return model, cv_results
 
 
 def evaluate_best_regressor(model, X, y, dataset, plot=True):

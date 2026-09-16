@@ -11,7 +11,8 @@ import argparse
 import pandas as pd
 
 from sklearn.preprocessing import StandardScaler
-
+from sklearn.base import ClassifierMixin, RegressorMixin
+from sklearn.model_selection import GridSearchCV, StratifiedKFold
 
 sys.path.append("./")
 sys.path.append("../scripts/")
@@ -150,7 +151,7 @@ def train(model_type, file_data, dir_output, n_jobs):
     start = time.time()
 
     regressor = get_model_instance(model_type, seed)
-    model, cv_results = utils.run_CV(
+    model, cv_results = run_CV(
         regressor, hyperparameter_grid, num_cv, X_train, y_train_cat, y_train, n_jobs, verbose=2
     )
 
@@ -187,6 +188,32 @@ def train(model_type, file_data, dir_output, n_jobs):
     utils.get_model_size(model)
 
     print("Done.")
+
+
+def run_CV(model, hyperparameter_grid, num_cv, X, y_train_cat, y_train, n_jobs, verbose=0):
+    # Tune hyperparameters
+    skf = StratifiedKFold(n_splits=num_cv).split(X, y_train_cat)
+
+    gridsearch_classifier = GridSearchCV(model, hyperparameter_grid, cv=skf, n_jobs=n_jobs, verbose=verbose)
+
+    if isinstance(model, ClassifierMixin):
+        gridsearch_classifier.fit(X, y_train_cat)
+    elif isinstance(model, RegressorMixin):
+        gridsearch_classifier.fit(X, y_train)
+
+    # Take the best estimator
+    model = gridsearch_classifier.best_estimator_
+
+    # Collect CV Results
+    cv_results = pd.concat(
+        [
+            pd.DataFrame(gridsearch_classifier.cv_results_["params"]),
+            pd.DataFrame(gridsearch_classifier.cv_results_["mean_test_score"], columns=["score"]),
+        ],
+        axis=1,
+    )
+
+    return model, cv_results
 
 
 def main():
