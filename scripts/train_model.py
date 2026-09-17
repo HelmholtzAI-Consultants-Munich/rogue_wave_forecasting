@@ -282,7 +282,7 @@ def train(model_type, file_data, dir_output, n_jobs):
     print(f"Model training took {end - start:.2f} seconds")
 
     print("Evaluating model parameter configurations...")
-    cv_results = cv_results.sort_values("score", ascending=False).reset_index(drop=True)
+    cv_results = cv_results.sort_values("rmse", ascending=False).reset_index(drop=True)
     cv_results.to_csv(f"{dir_output}/{FILE_CV_RESULTS}", index=False)
     print(cv_results)
 
