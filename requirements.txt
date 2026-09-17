@@ -1,5 +1,8 @@
+# Direct dependencies, mirroring pyproject.toml.
+# Exact versions live in uv.lock - prefer `uv sync` over this file.
+
 fgclustering
-imblearn
+imbalanced-learn
 matplotlib
 numpy
 pandas

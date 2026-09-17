@@ -1,0 +1,52 @@
+[project]
+name = "rogue-wave-forecasting"
+version = "0.1.0"
+description = "Prediction and explanation of rogue waves from North Sea radar measurements"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.13,<3.14"  # numba (umap-learn, shap) has no 3.14 wheels yet
+
+dependencies = [
+    "fgclustering>=3.0",
+    "imbalanced-learn>=0.14",
+    "matplotlib>=3.11",
+    "numpy>=2.5",
+    "pandas>=3.0",
+    "scikit-learn>=1.9",
+    "scipy>=1.18",
+    "seaborn>=0.13",
+    "shap>=0.52",
+    "tqdm>=4.70",
+    "umap-learn>=0.5.12",
+    "xgboost>=3.4",
+]
+
+[project.optional-dependencies]
+# Only needed for 05_ffnn_regression.ipynb and scripts/train_ffnn.py.
+ffnn = [
+    "tensorflow>=2.16",
+    "scikeras>=0.13",
+]
+
+[dependency-groups]
+# Installed by default with `uv sync`; drop with `--no-dev` on a headless cluster.
+dev = [
+    "ipykernel>=7.0",
+    "ipython>=9.0",
+    "jupyter>=1.1",
+    "jupyterlab>=4.6",
+    "notebook>=7.6",
+]
+
+[tool.uv]
+# Analysis repository, not an installable package: nothing to build, `scripts/` is
+# imported via sys.path from the notebooks.
+package = false
+
+# Platforms the lock file is resolved for: Apple Silicon laptops and the Linux
+# cluster. Intel macOS is excluded because numba (umap-learn, shap, fgclustering)
+# no longer ships wheels for it against numpy 2.x.
+environments = [
+    "sys_platform == 'darwin' and platform_machine == 'arm64'",
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+]
