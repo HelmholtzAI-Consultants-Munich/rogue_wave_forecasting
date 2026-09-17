@@ -2,6 +2,8 @@
 ##### Imports
 ############################################################
 
+import os
+
 import shap
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -65,6 +67,15 @@ def set_plotting_style():
     )
 
 
+def save_figure(fig, filename, dir_output, ext="png"):
+    # Save fig as <dir_output>/<filename>.<ext> at the savefig.dpi set in
+    # set_plotting_style(). Pass dir_output=None to skip saving.
+    if dir_output is None or filename is None:
+        return
+    os.makedirs(dir_output, exist_ok=True)
+    fig.savefig(os.path.join(dir_output, f"{filename}.{ext}"), bbox_inches="tight")
+
+
 ############################################################
 ##### Utility Functions
 ############################################################
@@ -111,6 +122,8 @@ def plot_abni_series(
     ROGUE_WAVE_THRESHOLD,
     rolling_window,
     title="Abnormality Index over the recording period",
+    dir_output=None,
+    filename="abni_series",
 ):
     set_plotting_style()
 
@@ -168,12 +181,19 @@ def plot_abni_series(
     ax.set_xlim(wave_index[dec][0], wave_index[dec][-1])
     ax.set_xlabel("wave index")
     plt.tight_layout()
+    if dir_output is not None:
+        save_figure(fig, filename, dir_output)
     plt.show()
 
     return fig, ax
 
 
-def plot_rogue_wave_gaps(gaps, title="Waiting-time distribution"):
+def plot_rogue_wave_gaps(
+    gaps,
+    title="Waiting-time distribution",
+    dir_output=None,
+    filename="rogue_wave_gaps",
+):
     set_plotting_style()
 
     fig, ax = plt.subplots(figsize=(7, 4))
@@ -185,6 +205,8 @@ def plot_rogue_wave_gaps(gaps, title="Waiting-time distribution"):
     ax.set_ylabel("count")
 
     plt.tight_layout()
+    if dir_output is not None:
+        save_figure(fig, filename, dir_output)
     plt.show()
 
     return fig, ax
@@ -202,6 +224,8 @@ def plot_abni_feature_relationship(
     event_anchor="mixed",
     show_events_on_features=True,
     add_rogue_event_scatter=True,
+    dir_output=None,
+    filename="abni_feature_relationship",
 ):
     set_plotting_style()
 
@@ -255,11 +279,13 @@ def plot_abni_feature_relationship(
 
     axes[-1].set_xlabel("wave index")
     plt.tight_layout()
+    if dir_output is not None:
+        save_figure(fig, filename, dir_output)
     plt.show()
     return fig, axes
 
 
-def plot_acf(acf, n_waves):
+def plot_acf(acf, n_waves, dir_output, filename="acf"):
     set_plotting_style()
 
     short_max_lag = min(500, n_waves - 1)
@@ -289,6 +315,8 @@ def plot_acf(acf, n_waves):
     axes[1].set_title("Long lags")
 
     plt.tight_layout()
+    if dir_output is not None:
+        save_figure(fig, filename, dir_output)
     plt.show()
 
     return fig, axes
@@ -299,7 +327,11 @@ def plot_correlation_matrix(
     method="spearman",
     title="Spearman correlation",
     annot=True,
+    dir_output=None,
+    filename="correlation_matrix",
 ):
+    set_plotting_style()
+
     corr = frame.corr(method=method)
     mask = np.triu(np.ones_like(corr, dtype=bool), k=1)
 
@@ -325,6 +357,7 @@ def plot_correlation_matrix(
     plt.setp(ax.get_yticklabels(), rotation=0, fontsize=6)
 
     plt.tight_layout()
+    save_figure(fig, filename, dir_output)
     plt.show()
 
     return fig, ax
@@ -343,6 +376,8 @@ def plot_feature_vs_target(
     target_label="AbnI",
     threshold=None,
     title="Features vs. AbnI",
+    dir_output=None,
+    filename="feature_vs_target",
 ):
     set_plotting_style()
 
@@ -390,6 +425,8 @@ def plot_feature_vs_target(
 
     fig.suptitle(title or f"Features vs. {target_label}", y=1.0, fontsize=12)
     plt.tight_layout()
+    if dir_output is not None:
+        save_figure(fig, filename, dir_output)
     plt.show()
 
     return fig, axes
@@ -404,7 +441,11 @@ def plot_group_boxplots(
     ncols=5,
     panel_size=3.0,
     title="Feature Distributions",
+    dir_output=None,
+    filename="group_boxplots",
 ):
+    set_plotting_style()
+
     mask = np.asarray(mask, dtype=bool)
     group = np.where(mask, group_names[1], group_names[0])
     nrows = int(np.ceil(len(columns) / ncols))
@@ -443,11 +484,22 @@ def plot_group_boxplots(
         fontsize=12,
     )
     plt.tight_layout()
+    if dir_output is not None:
+        save_figure(fig, filename, dir_output)
     plt.show()
     return fig, axes
 
 
-def plot_scree(explained_variance_ratio, n_show=None, title=None, figsize=(6.5, 4)):
+def plot_scree(
+    explained_variance_ratio,
+    n_show=None,
+    title=None,
+    figsize=(6.5, 4),
+    dir_output=None,
+    filename="scree",
+):
+    set_plotting_style()
+
     evr = np.asarray(explained_variance_ratio)[:n_show]
     x = np.arange(1, len(evr) + 1)
 
@@ -461,6 +513,8 @@ def plot_scree(explained_variance_ratio, n_show=None, title=None, figsize=(6.5, 
     ax.set_title(title or "PCA scree plot")
     ax.legend()
     plt.tight_layout()
+    if dir_output is not None:
+        save_figure(fig, filename, dir_output)
     plt.show()
     return fig, ax
 
@@ -475,7 +529,11 @@ def plot_embedding(
     n_sample=50_000,
     seed=42,
     figsize=(15, 6),
+    dir_output=None,
+    filename=None,
 ):
+    set_plotting_style()
+
     rng = np.random.default_rng(seed)
     n = len(emb)
     n_blocks = int(blocks.max()) + 1
@@ -536,13 +594,11 @@ def plot_embedding(
         cbar.ax.set_yticklabels(block_labels, fontsize=7)
 
     plt.tight_layout()
+    filename = filename or f"embedding_{method.lower()}"
+    if dir_output is not None:
+        save_figure(fig, filename, dir_output)
     plt.show()
     return fig, axes
-
-
-def fold_tints(n):
-    i = np.linspace(0, len(C_FOLD) - 1, n).round().astype(int)
-    return [C_FOLD[k] for k in i]
 
 
 def plot_cv_folds(
@@ -558,14 +614,19 @@ def plot_cv_folds(
     raw_color="0.45",
     figsize=(15, 4),
     title=None,
+    dir_output=None,
+    filename="cv_folds",
 ):
     """Time series with the chronological split shaded: purge gaps, folds 1..num_cv, test.
 
     ev_start: positional indices of the rogue-wave events, drawn as dots.
     event_on_rolling places them on the rolling mean instead of the raw value.
     """
+    set_plotting_style()
+
     idx, y, fold = data.index.to_numpy(), data[y_col].to_numpy(), data[fold_col].to_numpy()
-    tints = fold_tints(num_cv)
+    i = np.linspace(0, len(C_FOLD) - 1, num_cv).round().astype(int)
+    tints = [C_FOLD[k] for k in i]
     color = lambda f: C_PURGE if f == 0 else (C_TEST if f > num_cv else tints[f - 1])
 
     fig, ax = plt.subplots(figsize=figsize)
@@ -616,7 +677,10 @@ def plot_cv_folds(
         fontsize=8,
         frameon=False,
     )
-    plt.tight_layout(), plt.show()
+    plt.tight_layout()
+    if dir_output is not None:
+        save_figure(fig, filename, dir_output)
+    plt.show()
     return fig, ax
 
 
@@ -630,6 +694,8 @@ def plot_predictions(
     kind="hexbin",
     gridsize=60,
     figsize=(4.5, 4.5),
+    dir_output=None,
+    filename="predictions",
 ):
     """True vs. predicted values as a 2-d density (or scatter), with the y = x reference.
 
@@ -682,6 +748,8 @@ def plot_predictions(
     ax.legend(loc="lower right")
 
     plt.tight_layout()
+    if dir_output is not None:
+        save_figure(fig, filename, dir_output)
     plt.show()
     return fig, ax
 
@@ -694,6 +762,8 @@ def plot_shap_dependence(
     share_y=True,
     dot_size=6,
     alpha=0.4,
+    dir_output=None,
+    filename="shap_dependence",
 ):
     """SHAP dependence panels, ordered by descending mean |SHAP|.
 
@@ -740,5 +810,7 @@ def plot_shap_dependence(
         fig.delaxes(ax)
 
     plt.tight_layout()
+    if dir_output is not None:
+        save_figure(fig, filename, dir_output)
     plt.show()
     return fig, axes[: len(features)]
