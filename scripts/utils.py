@@ -552,11 +552,18 @@ def plot_cv_folds(
     num_cv,
     fold_col="fold",
     rolling_window=None,
+    ev_start=None,
+    threshold=None,
+    event_on_rolling=False,
     raw_color="0.45",
     figsize=(15, 4),
     title=None,
 ):
-    """Time series with the chronological split shaded: purge gaps, folds 1..num_cv, test."""
+    """Time series with the chronological split shaded: purge gaps, folds 1..num_cv, test.
+
+    ev_start: positional indices of the rogue-wave events, drawn as dots.
+    event_on_rolling places them on the rolling mean instead of the raw value.
+    """
     idx, y, fold = data.index.to_numpy(), data[y_col].to_numpy(), data[fold_col].to_numpy()
     tints = fold_tints(num_cv)
     color = lambda f: C_PURGE if f == 0 else (C_TEST if f > num_cv else tints[f - 1])
@@ -567,9 +574,34 @@ def plot_cv_folds(
         ax.axvspan(idx[a], idx[b - 1], color=color(fold[a]), lw=0, zorder=0)
 
     ax.plot(idx[dec], y[dec], lw=0.3, color=raw_color, rasterized=True, zorder=1)
-    if rolling_window:
+
+    y_roll = roll(y, rolling_window) if rolling_window else None
+    if y_roll is not None:
         step = max(1, len(idx) // 8000)
-        ax.plot(idx[::step], roll(y, rolling_window)[::step], lw=1.4, color=C_ROLL, zorder=2)
+        ax.plot(idx[::step], y_roll[::step], lw=1.4, color=C_ROLL, zorder=2)
+
+    handles = [Patch(facecolor=t, label=f"fold {g}") for g, t in enumerate(tints, 1)] + [
+        Patch(facecolor=C_PURGE, label="purge gap"),
+        Patch(facecolor=C_TEST, label="test"),
+    ]
+
+    if ev_start is not None and len(ev_start):
+        ev_start = np.asarray(ev_start)
+        y_events = y_roll[ev_start] if (event_on_rolling and y_roll is not None) else y[ev_start]
+        handles.append(
+            ax.scatter(
+                idx[ev_start],
+                y_events,
+                s=12,
+                color=C_ROGUE,
+                edgecolors="white",
+                linewidths=0.3,
+                zorder=5,
+                label="rogue events",
+            )
+        )
+    if threshold is not None:
+        ax.axhline(threshold, ls="--", lw=1.0, color=C_ROGUE, zorder=4)
 
     ax.grid(False)
     ax.set_xlim(idx[0], idx[-1])
@@ -577,11 +609,10 @@ def plot_cv_folds(
     ax.set_ylabel(y_col)
     ax.set_title(title or f"{y_col} with the chronological split")
     ax.legend(
-        handles=[Patch(facecolor=t, label=f"fold {g}") for g, t in enumerate(tints, 1)]
-        + [Patch(facecolor=C_PURGE, label="purge gap"), Patch(facecolor=C_TEST, label="test")],
+        handles=handles,
         loc="upper center",
         bbox_to_anchor=(0.5, -0.25),
-        ncol=num_cv + 2,
+        ncol=len(handles),
         fontsize=8,
         frameon=False,
     )
