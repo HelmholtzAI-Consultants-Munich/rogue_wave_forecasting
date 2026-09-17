@@ -182,7 +182,7 @@ def run_CV(model, hyperparameter_grid, num_cv, X, y, groups, n_jobs, verbose=0):
     # Take the best estimator
     model = gridsearch_cv.best_estimator_
 
-    # Collect CV Results (multi-metric scoring → mean_test_<name>, not mean_test_score)
+    # Get all CV results
     cv_results = pd.concat(
         [
             pd.DataFrame(gridsearch_cv.cv_results_["params"]),
