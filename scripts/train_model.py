@@ -78,41 +78,44 @@ def argument_parser():
 def get_hyperparameter_grid(model_type):
     if model_type == "lm":
         hyperparameter_grid = {
-            "alpha": np.logspace(-5, 0, 9),
-            "l1_ratio": [0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 1.0],
-            "max_iter": [20_000],
-            "tol": [1e-4],
-            "selection": ["cyclic"],
+            "alpha": np.logspace(-5, 0, 9),  # Overall Elastic Net regularisation strength
+            "l1_ratio": [0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 1.0],  # L1–L2 penalty mixture
+            "max_iter": [20_000],  # Maximum coordinate-descent iterations
+            "tol": [1e-4],  # Convergence tolerance
+            "selection": ["cyclic"],  # Update coefficients sequentially
         }
+
     elif model_type == "svm":
         hyperparameter_grid = {
-            "kernel": ["rbf"],
-            "C": [0.3, 3.0, 30.0],
-            "gamma": [0.03, 0.10],
-            "epsilon": [0.05, 0.15],
+            "kernel": ["rbf"],  # Nonlinear radial-basis-function kernel
+            "C": [0.3, 3.0, 30.0],  # Penalty for prediction errors
+            "gamma": [0.03, 0.10],  # Locality of each training sample's influence
+            "epsilon": [0.05, 0.15],  # Width of the error-insensitive regression tube
         }
+
     elif model_type == "rf":
         hyperparameter_grid = {
-            "n_estimators": [100, 500],
-            "max_depth": [None, 10, 20, 30],
-            "max_samples": [0.25, 0.50, 0.75],
-            "max_features": ["sqrt", 0.5, 1.0],
-            "min_samples_leaf": [2, 5, 20, 50, 100],
-            "min_samples_split": [2, 10, 50],
-            "criterion": ["squared_error"],
+            "n_estimators": [100, 500],  # Number of trees
+            "max_depth": [None, 10, 20, 30],  # Maximum depth of each tree
+            "max_samples": [0.25, 0.50, 0.75],  # Fraction of rows sampled per tree
+            "max_features": ["sqrt", 0.5, 1.0],  # Features considered at each split
+            "min_samples_leaf": [2, 5, 20, 50, 100],  # Minimum observations in a leaf
+            "min_samples_split": [2, 10, 50],  # Minimum observations required to split
+            "criterion": ["squared_error"],  # Split quality based on variance reduction
         }
+
     elif model_type == "xgb":
         hyperparameter_grid = {
-            "n_estimators": [100, 500],
-            "learning_rate": [0.02, 0.05, 0.07, 0.10],
-            "max_depth": [5, 10, 20],
-            "min_child_weight": [1, 5, 10, 25, 50],
-            "subsample": [0.25, 0.50, 0.75, 1.0],
-            "colsample_bytree": [0.50, 0.70, 0.85, 1.0],
-            "gamma": [0.0, 0.1, 0.5, 1.0],
-            "reg_alpha": [0.0, 0.01, 0.10, 0.50, 1.0],
-            "reg_lambda": [1.0, 3.0, 10.0, 30.0],
-            "tree_method": ["hist"],
+            "n_estimators": [100, 500],  # Number of boosting trees
+            "learning_rate": [0.02, 0.10],  # Contribution of each new tree
+            "max_depth": [5, 10, 20],  # Maximum interaction depth of each tree
+            "min_child_weight": [1, 20],  # Minimum Hessian weight in a child
+            "subsample": [0.25, 0.50, 0.75],  # Fraction of rows used per tree
+            "colsample_bytree": [0.8],  # Fraction of features used per tree
+            "gamma": [0.0, 0.5],  # Minimum gain required for a split
+            "reg_alpha": [0.01, 0.50, 1.0],  # L1 regularisation on leaf weights
+            "reg_lambda": [5.0],  # L2 regularisation on leaf weights
+            "tree_method": ["hist"],  # Histogram-based tree construction
         }
     else:
         raise ValueError(f"Unknown model type: {model_type}")
