@@ -8,20 +8,21 @@
 #SBATCH --cpus-per-task=50    
 #SBATCH --mem=500GB   
 
-# Ensure Conda is in the PATH
-export PATH=~/anaconda3/bin:$PATH
-export LD_LIBRARY_PATH=~/anaconda3/lib:$LD_LIBRARY_PATH
+# uv lives in ~/.local/bin after the one-time cluster setup (see README)
+export PATH="$HOME/.local/bin:$PATH"
+export UV_LINK_MODE=copy
 
-# Initialize Conda in the script 
-source ~/anaconda3/etc/profile.d/conda.sh
-echo "Using Conda:"
-conda -V    
+# train_model.py resolves ../data and ../results, so run from scripts/
+cd "${SLURM_SUBMIT_DIR:-$(dirname "$0")}"
 
-# Activate the Conda environment
+echo "Using uv:"
+uv --version
 echo "Using Python:"
-~/anaconda3/envs/rogue_wave/bin/python -V
-~/anaconda3/envs/rogue_wave/bin/python -u train_model.py  \
+uv run --project .. --no-sync python -V
+
+# --no-sync: use the .venv built on the login node, never hit the network here
+uv run --project .. --no-sync python -u train_model.py  \
     --model_type xgb  \
-    --file_data ../data/data_train_test.pickle  \
+    --file_data ../data/data_train_test_new.pickle  \
     --dir_output ../results/xgb/  \
     --n_jobs 50
