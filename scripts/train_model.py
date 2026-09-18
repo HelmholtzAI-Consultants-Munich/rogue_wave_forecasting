@@ -11,6 +11,7 @@ import argparse
 import pandas as pd
 import numpy as np
 
+from pathlib import Path
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
@@ -18,9 +19,12 @@ from sklearn.model_selection import GridSearchCV, GroupKFold, TimeSeriesSplit
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from scipy.stats import spearmanr
 
-sys.path.append("./")
-sys.path.append("../scripts/")
+
+DIR_ROOT = Path(__file__).resolve().parent.parent
+sys.path.append(str(DIR_ROOT))
+
 import utils
+
 from constants import (
     COLUMN_TARGET,
     COLUMN_FEATURES,
