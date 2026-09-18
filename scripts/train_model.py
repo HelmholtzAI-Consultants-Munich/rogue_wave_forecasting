@@ -52,7 +52,7 @@ SEED = 42
 
 
 def argument_parser():
-    parser = argparse.ArgumentParser(description="Run SHAP.")
+    parser = argparse.ArgumentParser(description="Train model.")
     parser.add_argument("--model_type", type=str, help="Type of model to train")
     parser.add_argument("--cv_type", type=str, help="Type of cross-validation")
     parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs")
@@ -60,11 +60,9 @@ def argument_parser():
     args = parser.parse_args()
     model_type = args.model_type
     cv_type = args.cv_type
-    file_data = FILE_DATA_PROCESSED
-    dir_output = f"{DIR_RESULTS}/{model_type}_{cv_type}"
     n_jobs = args.n_jobs
 
-    return model_type, cv_type, file_data, dir_output, n_jobs
+    return model_type, cv_type, n_jobs
 
 
 def get_hyperparameter_grid(model_type):
@@ -350,7 +348,10 @@ def load_data_and_model(
 
 def main():
     model_type, cv_type, n_jobs = argument_parser()
-    os.makedirs(DIR_RESULTS, exist_ok=True)
+
+    dir_output = f"{DIR_RESULTS}/{model_type}_{cv_type}"
+    os.makedirs(dir_output, exist_ok=True)
+
     train(
         model_type=model_type,
         column_target=COLUMN_TARGET,
