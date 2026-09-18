@@ -85,7 +85,7 @@ HYPERPARAMETER_GRID_SVM = {
 }
 
 HYPERPARAMETER_GRID_RF = {
-    "n_estimators": [100, 500],  # Number of trees
+    "n_estimators": [100, 250],  # Number of trees
     "max_depth": [None, 10, 20, 30],  # Maximum depth of each tree
     "max_samples": [0.25, 0.50, 0.75],  # Fraction of rows sampled per tree
     "max_features": ["sqrt", 0.5, 1.0],  # Features considered at each split
