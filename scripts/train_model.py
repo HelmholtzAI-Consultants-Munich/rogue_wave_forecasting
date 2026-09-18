@@ -364,7 +364,7 @@ def main():
         file_cv_results=FILE_CV_RESULTS,
         file_performance_train_csv=FILE_PERFORMANCE_TRAIN_CSV,
         file_performance_test_csv=FILE_PERFORMANCE_TEST_CSV,
-        dir_output=DIR_RESULTS,
+        dir_output=dir_output,
         n_jobs=n_jobs,
     )
 
