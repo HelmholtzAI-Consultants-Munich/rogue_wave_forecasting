@@ -20,9 +20,9 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from scipy.stats import spearmanr
 
 DIR_ROOT = Path(__file__).resolve().parent.parent
+sys.path.append(str(DIR_ROOT))
 sys.path.append(str(DIR_ROOT / "scripts"))
 
-print(f"DIR_ROOT: {DIR_ROOT}")
 
 import utils
 
