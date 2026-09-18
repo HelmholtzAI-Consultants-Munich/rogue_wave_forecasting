@@ -6,7 +6,7 @@
 #SBATCH --qos=cpu_normal
 #SBATCH --ntasks=1            
 #SBATCH --cpus-per-task=50    
-#SBATCH --mem=200GB   
+#SBATCH --mem=400GB   
 
 # uv lives in ~/.local/bin after the one-time cluster setup (see README)
 export PATH="$HOME/.local/bin:$PATH"
