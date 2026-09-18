@@ -20,9 +20,12 @@ uv --version
 echo "Using Python:"
 uv run --project .. --no-sync python -V
 
-# --no-sync: use the .venv built on the login node, never hit the network here
-uv run --project .. --no-sync python -u train_model.py  \
+uv run --project .. python -u train_model.py  \
     --model_type lm  \
-    --file_data ../data/data_train_test_new.pickle  \
-    --dir_output ../results/lm/  \
+    --cv_type grouped \
+    --n_jobs 50
+
+uv run --project .. python -u train_model.py  \
+    --model_type lm  \
+    --cv_type time_series \
     --n_jobs 50
