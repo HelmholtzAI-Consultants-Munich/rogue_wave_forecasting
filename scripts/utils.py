@@ -725,7 +725,7 @@ def plot_predictions(
     else:
         ax.scatter(y_true, y_pred, s=2, color=C_RAW, alpha=0.3, rasterized=True)
 
-    ax.plot([lo, hi], [lo, hi], ls="--", lw=1.4, color=C_ROGUE, label="$y = x$")
+    ax.plot([lo, hi], [lo, hi], ls="--", lw=1.4, color=C_ROGUE)
 
     if textstr:
         ax.text(
@@ -745,7 +745,49 @@ def plot_predictions(
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
-    ax.legend(loc="lower right")
+
+    plt.tight_layout()
+    if dir_output is not None:
+        save_figure(fig, filename, dir_output)
+    plt.show()
+    return fig, ax
+
+
+def plot_coefficients(
+    coefficients,
+    column="Coefficient",
+    drop=("intercept",),
+    title="Elastic Net Model Coefficients",
+    ylabel="coefficient (standardised features)",
+    figsize=(8, 5),
+    dir_output=None,
+    filename="coefficients",
+):
+    """Signed model coefficients as a bar chart, coloured on the diverging map.
+
+    coefficients: a Series, or a DataFrame holding `column`. Labels listed in `drop` are
+    excluded: the intercept is on the scale of the target and is orders of magnitude
+    larger than the coefficients, so including it flattens all of them.
+    """
+    set_plotting_style()
+
+    values = coefficients[column] if isinstance(coefficients, pd.DataFrame) else coefficients
+    values = values.drop(labels=[d for d in (drop or ()) if d in values.index])
+
+    lim = float(np.abs(values).max())
+    norm = plt.Normalize(-lim, lim)
+    colors = [CMAP_DIVERGING(norm(v)) for v in values]
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.bar(values.index, values.to_numpy(), color=colors, edgecolor="white", linewidth=0.4)
+    ax.axhline(0, lw=1.0, color=C_INK_MUTED)
+
+    ax.set_xlabel("feature")
+    ax.set_ylabel(ylabel)
+    ax.set_title(title or "Model coefficients")
+    ax.grid(axis="y", alpha=0.3)
+    ax.grid(axis="x", visible=False)
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right")
 
     plt.tight_layout()
     if dir_output is not None:

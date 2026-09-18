@@ -14,45 +14,32 @@ import numpy as np
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import GridSearchCV, GroupKFold
+from sklearn.model_selection import GridSearchCV, GroupKFold, TimeSeriesSplit
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from scipy.stats import spearmanr
 
 sys.path.append("./")
 sys.path.append("../scripts/")
 import utils
+from constants import (
+    COLUMN_TARGET,
+    COLUMN_FEATURES,
+    COLUMN_FOLD,
+    PURGE_GAP,
+    NUM_CV,
+    DIR_RESULTS,
+    FILE_DATA_PROCESSED,
+    FILE_CV_RESULTS,
+    FILE_MODEL_AND_DATA,
+    FILE_PERFORMANCE_TEST_CSV,
+    FILE_PERFORMANCE_TRAIN_CSV,
+    HYPERPARAMETER_GRID_LM,
+    HYPERPARAMETER_GRID_SVM,
+    HYPERPARAMETER_GRID_RF,
+    HYPERPARAMETER_GRID_XGB,
+)
 
-############################################
-# Constants
-############################################
-
-COLUMN_TARGET = "AI_10min"
-COLUMN_FEATURES = [
-    "H_s",
-    "lambda_40",
-    "lambda_30",
-    "L_deep",
-    "s",
-    "mu",
-    "kh",
-    "T_p",
-    "nu",
-    "Q_p",
-    "BFI",
-    "r",
-    "v_wind",
-    "v_gust",
-    "T_air",
-    "p",
-    "Delta_p_1h",
-]
-COLUMN_FOLD = "fold"
-
-FILE_CV_RESULTS = "cv_results.csv"
-FILE_MODEL_AND_DATA = "model_and_data.pkl"
-FILE_PERFORMANCE_TEST = "performance_test"
-FILE_PERFORMANCE_TRAIN = "performance_train"
-FILE_MODEL_SIZE = "model_size.pickle"
+SEED = 42
 
 ############################################
 # Train Model
@@ -62,61 +49,31 @@ FILE_MODEL_SIZE = "model_size.pickle"
 def argument_parser():
     parser = argparse.ArgumentParser(description="Run SHAP.")
     parser.add_argument("--model_type", type=str, help="Type of model to train")
-    parser.add_argument("--file_data", type=str, help="Path to the data file")
-    parser.add_argument("--dir_output", type=str, help="Directory for output files")
+    parser.add_argument("--cv_type", type=str, help="Type of cross-validation")
     parser.add_argument("--n_jobs", type=int, default=1, help="Number of parallel jobs")
 
     args = parser.parse_args()
     model_type = args.model_type
-    file_data = args.file_data
-    dir_output = args.dir_output
+    cv_type = args.cv_type
+    file_data = FILE_DATA_PROCESSED
+    dir_output = f"{DIR_RESULTS}/{model_type}_{cv_type}"
     n_jobs = args.n_jobs
 
-    return model_type, file_data, dir_output, n_jobs
+    return model_type, cv_type, file_data, dir_output, n_jobs
 
 
 def get_hyperparameter_grid(model_type):
     if model_type == "lm":
-        hyperparameter_grid = {
-            "alpha": np.logspace(-5, 0, 9),  # Overall Elastic Net regularisation strength
-            "l1_ratio": [0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 1.0],  # L1–L2 penalty mixture
-            "max_iter": [20_000],  # Maximum coordinate-descent iterations
-            "tol": [1e-4],  # Convergence tolerance
-            "selection": ["cyclic"],  # Update coefficients sequentially
-        }
+        hyperparameter_grid = HYPERPARAMETER_GRID_LM
 
     elif model_type == "svm":
-        hyperparameter_grid = {
-            "kernel": ["rbf"],  # Nonlinear radial-basis-function kernel
-            "C": [0.3, 3.0, 30.0],  # Penalty for prediction errors
-            "gamma": [0.03, 0.10],  # Locality of each training sample's influence
-            "epsilon": [0.05, 0.15],  # Width of the error-insensitive regression tube
-        }
+        hyperparameter_grid = HYPERPARAMETER_GRID_SVM
 
     elif model_type == "rf":
-        hyperparameter_grid = {
-            "n_estimators": [100, 500],  # Number of trees
-            "max_depth": [None, 10, 20, 30],  # Maximum depth of each tree
-            "max_samples": [0.25, 0.50, 0.75],  # Fraction of rows sampled per tree
-            "max_features": ["sqrt", 0.5, 1.0],  # Features considered at each split
-            "min_samples_leaf": [20, 50, 100],  # Minimum observations in a leaf
-            "min_samples_split": [2, 10, 50],  # Minimum observations required to split
-            "criterion": ["squared_error"],  # Split quality based on variance reduction
-        }
+        hyperparameter_grid = HYPERPARAMETER_GRID_RF
 
     elif model_type == "xgb":
-        hyperparameter_grid = {
-            "n_estimators": [100, 500],  # Number of boosting trees
-            "learning_rate": [0.02, 0.10],  # Contribution of each new tree
-            "max_depth": [5, 10, 20],  # Maximum interaction depth of each tree
-            "min_child_weight": [1, 20],  # Minimum Hessian weight in a child
-            "subsample": [0.25, 0.50, 0.75],  # Fraction of rows used per tree
-            "colsample_bytree": [0.8],  # Fraction of features used per tree
-            "gamma": [0.0, 0.5],  # Minimum gain required for a split
-            "reg_alpha": [0.01, 0.50, 1.0],  # L1 regularisation on leaf weights
-            "reg_lambda": [5.0],  # L2 regularisation on leaf weights
-            "tree_method": ["hist"],  # Histogram-based tree construction
-        }
+        hyperparameter_grid = HYPERPARAMETER_GRID_XGB
     else:
         raise ValueError(f"Unknown model type: {model_type}")
     return hyperparameter_grid
@@ -149,24 +106,36 @@ def get_model_instance(model_type, seed):
     return model
 
 
-def load_data(file_data):
+def load_data(file_data, column_target, column_features, column_fold):
 
     with open(file_data, "rb") as handle:
         data_train, data_test = pickle.load(handle)
 
-    X_train, y_train = data_train[COLUMN_FEATURES], data_train[COLUMN_TARGET]
-    X_test, y_test = data_test[COLUMN_FEATURES], data_test[COLUMN_TARGET]
-    cv_groups = data_train[COLUMN_FOLD].to_numpy()
+    X_train, y_train = data_train[column_features], data_train[column_target]
+    X_test, y_test = data_test[column_features], data_test[column_target]
+    cv_groups = data_train[column_fold].to_numpy()
 
     return data_train, data_test, X_train, y_train, X_test, y_test, cv_groups
 
 
-def run_CV(model, hyperparameter_grid, num_cv, X, y, groups, n_jobs, verbose=0):
+def run_CV(model, hyperparameter_grid, cv_type, num_cv, X, y, groups, n_jobs, verbose=0):
 
     scoring = {"rmse": "neg_root_mean_squared_error", "mae": "neg_mean_absolute_error", "r2": "r2"}
 
-    # Tune hyperparameters with grouped CV: each chronological fold validates exactly once
-    skf = list(GroupKFold(n_splits=num_cv).split(X, y, groups=groups))
+    if cv_type == "grouped":
+
+        mask = groups.between(1, num_cv)
+        X = X.loc[mask]
+        y = y.loc[mask]
+        groups = groups.loc[mask]
+
+        skf = list(GroupKFold(n_splits=num_cv).split(X, y, groups=groups))
+    elif cv_type == "time_series":
+        skf = list(
+            TimeSeriesSplit(
+                n_splits=num_cv, test_size=len(X) // 10, gap=PURGE_GAP, max_train_size=None
+            ).split(X, y)
+        )
 
     gridsearch_cv = GridSearchCV(
         model,
@@ -200,8 +169,9 @@ def run_CV(model, hyperparameter_grid, num_cv, X, y, groups, n_jobs, verbose=0):
     return model, cv_results
 
 
-def evaluate_model(model, X, y, set_name, dir_output, filename, plot=True, save=False):
-    # Predict labels
+def evaluate_model(model, X, y, set_name, dir_output, filename_plot, filename_csv, plot=True, save=False):
+    print(f"Evaluate on {set_name} Set")
+
     y_pred = model.predict(X)
 
     mse = round(mean_squared_error(y, y_pred), 3)
@@ -209,30 +179,20 @@ def evaluate_model(model, X, y, set_name, dir_output, filename, plot=True, save=
     r2 = round(r2_score(y, y_pred), 3)
     spearman_r = round(spearmanr(y, y_pred).correlation, 3)
 
-    if plot:
-        print(f"Evaluate on {set_name} Set")
-        textstr = f"$MSE={mse}$\n$MAE={mae}$\n$R^2={r2}$\n$Spearman\\ R={spearman_r}$"
-        fig, ax = utils.plot_predictions(y_true=y, y_pred=y_pred, textstr=textstr)
-        fig.savefig(f"{dir_output}/{filename}.png", bbox_inches="tight", dpi=300)
-
-    if save:
-        output = [y, y_pred, mse, mae, r2, spearman_r]
-        with open(f"{dir_output}/{filename}.pkl", "wb") as handle:
-            pickle.dump(output, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
     print(
         f"{set_name} set performance: r2={r2:.3f}, spearman_r={spearman_r:.3f}, mse={mse:.3f}, mae={mae:.3f}"
     )
 
+    if plot:
 
-def store_predictions(model, X_train, y_train, X_test, y_test, dir_output):
+        textstr = f"$MSE={mse}$\n$MAE={mae}$\n$R^2={r2}$\n$Spearman\\ R={spearman_r}$"
+        fig, ax = utils.plot_predictions(y_true=y, y_pred=y_pred, textstr=textstr)
 
-    set_name = "Training"
-    evaluate_model(
-        model, X_train, y_train, set_name, dir_output, FILE_PERFORMANCE_TRAIN, plot=False, save=True
-    )
-    set_name = "Test"
-    evaluate_model(model, X_test, y_test, set_name, dir_output, FILE_PERFORMANCE_TEST, plot=False, save=True)
+    if save:
+        output = [y, y_pred, mse, mae, r2, spearman_r]
+        with open(f"{dir_output}/{filename_csv}", "wb") as handle:
+            pickle.dump(output, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        fig.savefig(f"{dir_output}/{filename_plot}", bbox_inches="tight", dpi=300)
 
 
 def get_model_size(model):
@@ -247,18 +207,32 @@ def get_model_size(model):
     return size_gib
 
 
-def train(model_type, file_data, dir_output, n_jobs):
+def train(
+    model_type,
+    column_target,
+    column_features,
+    column_fold,
+    cv_type,
+    num_cv,
+    file_data,
+    file_model_and_data,
+    file_cv_results,
+    file_performance_train_csv,
+    file_performance_test_csv,
+    dir_output,
+    n_jobs,
+):
 
     print(f"Setup {model_type}...")
-    seed = 42
-    num_cv = 5
     hyperparameter_grid = get_hyperparameter_grid(model_type)
 
-    print(f"Using {n_jobs} cores from {os.cpu_count()} available cores.")
+    print(f"Storing results in {dir_output} and using {n_jobs} cores from {os.cpu_count()} available cores.")
     print(hyperparameter_grid)
 
-    print("Loading data...")
-    data_train, data_test, X_train, y_train, X_test, y_test, cv_groups = load_data(file_data)
+    print(f"Loading data from {file_data}...")
+    data_train, data_test, X_train, y_train, X_test, y_test, cv_groups = load_data(
+        file_data, column_target, column_features, column_fold
+    )
 
     print(
         f"{len(X_train):,} train rows in folds {sorted(set(cv_groups))}, "
@@ -266,7 +240,7 @@ def train(model_type, file_data, dir_output, n_jobs):
     )
 
     print("Getting model instance...")
-    base_model = get_model_instance(model_type, seed)
+    base_model = get_model_instance(model_type, SEED)
     needs_scaling = model_type in {"lm", "svm"}
     pipeline = Pipeline(
         [("scale", StandardScaler() if needs_scaling else "passthrough"), ("model", base_model)]
@@ -276,20 +250,41 @@ def train(model_type, file_data, dir_output, n_jobs):
     print("Tuning hyperparameters with cross-validation...")
     start = time.time()
     model, cv_results = run_CV(
-        pipeline, hyperparameter_grid, num_cv, X_train, y_train, cv_groups, n_jobs, verbose=2
+        pipeline, hyperparameter_grid, cv_type, num_cv, X_train, y_train, cv_groups, n_jobs, verbose=2
     )
     end = time.time()
     print(f"Model training took {end - start:.2f} seconds")
 
     print("Evaluating model parameter configurations...")
     cv_results = cv_results.sort_values("rmse", ascending=False).reset_index(drop=True)
-    cv_results.to_csv(f"{dir_output}/{FILE_CV_RESULTS}", index=False)
+    cv_results.to_csv(f"{dir_output}/{file_cv_results}", index=False)
     print(cv_results)
 
     if model_type == "svm":
-        store_predictions(model, X_train, y_train, X_test, y_test, dir_output)
+        evaluate_model(
+            model=model,
+            X=X_train,
+            y=y_train,
+            set_name="Training",
+            dir_output=dir_output,
+            filename_csv=file_performance_train_csv,
+            filename_plot=None,
+            plot=False,
+            save=True,
+        )
+        evaluate_model(
+            model=model,
+            X=X_test,
+            y=y_test,
+            set_name="Test",
+            dir_output=dir_output,
+            filename_csv=file_performance_test_csv,
+            filename_plot=None,
+            plot=False,
+            save=True,
+        )
 
-    with open(f"{dir_output}/{FILE_MODEL_AND_DATA}", "wb") as handle:
+    with open(f"{dir_output}/{file_model_and_data}", "wb") as handle:
         pickle.dump([data_train, data_test, model], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     size_gib = get_model_size(model)
@@ -297,14 +292,24 @@ def train(model_type, file_data, dir_output, n_jobs):
     print("Done.")
 
 
-def load_data_and_model(file_data_model, dir_output, output=True):
+def load_data_and_model(
+    file_data_model,
+    column_target,
+    column_features,
+    file_performance_train_plot=None,
+    file_performance_train_csv=None,
+    file_performance_test_plot=None,
+    file_performance_test_csv=None,
+    dir_output=None,
+    output=True,
+):
 
     # Load and unpack the data
     with open(file_data_model, "rb") as handle:
         data_train, data_test, model = pickle.load(handle)
 
-    X_train, y_train = data_train[COLUMN_FEATURES], data_train[COLUMN_TARGET]
-    X_test, y_test = data_test[COLUMN_FEATURES], data_test[COLUMN_TARGET]
+    X_train, y_train = data_train[column_features], data_train[column_target]
+    X_test, y_test = data_test[column_features], data_test[column_target]
 
     if isinstance(model, RandomForestRegressor):
         tree_depths = [estimator.tree_.max_depth for estimator in model.estimators_]
@@ -312,23 +317,50 @@ def load_data_and_model(file_data_model, dir_output, output=True):
         print(f"Loaded the following model: {model} with an average tree depth of : {average_depth}")
 
     if output:
-        set_name = "Training"
         evaluate_model(
-            model, X_train, y_train, set_name, dir_output, FILE_PERFORMANCE_TRAIN, plot=True, save=False
+            model=model,
+            X=X_train,
+            y=y_train,
+            set_name="Training",
+            dir_output=dir_output,
+            filename_plot=file_performance_train_plot,
+            filename_csv=file_performance_train_csv,
+            plot=True,
+            save=False,
+        )
+        evaluate_model(
+            model=model,
+            X=X_test,
+            y=y_test,
+            set_name="Test",
+            dir_output=dir_output,
+            filename_plot=file_performance_test_plot,
+            filename_csv=file_performance_test_csv,
+            plot=True,
+            save=False,
         )
 
-        set_name = "Test"
-        evaluate_model(
-            model, X_test, y_test, set_name, dir_output, FILE_PERFORMANCE_TEST, plot=True, save=False
-        )
-
-    return model, data_train, data_test
+    return model, data_train, data_test, X_train, y_train, X_test, y_test
 
 
 def main():
-    model_type, file_data, dir_output, n_jobs = argument_parser()
-    os.makedirs(dir_output, exist_ok=True)
-    train(model_type, file_data, dir_output, n_jobs)
+    model_type, cv_type, n_jobs = argument_parser()
+    os.makedirs(DIR_RESULTS, exist_ok=True)
+    train(
+        model_type=model_type,
+        column_target=COLUMN_TARGET,
+        column_features=COLUMN_FEATURES,
+        column_fold=COLUMN_FOLD,
+        cv_type=cv_type,
+        num_cv=NUM_CV,
+        file_data=FILE_DATA_PROCESSED,
+        file_model_and_data=FILE_MODEL_AND_DATA,
+        file_cv_results=FILE_CV_RESULTS,
+        file_performance_train_csv=FILE_PERFORMANCE_TRAIN_CSV,
+        file_performance_test_csv=FILE_PERFORMANCE_TEST_CSV,
+        dir_output=DIR_RESULTS,
+        n_jobs=n_jobs,
+    )
 
 
 if __name__ == "__main__":
