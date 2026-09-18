@@ -116,7 +116,7 @@ def load_data(file_data, column_target, column_features, column_fold):
 
     X_train, y_train = data_train[column_features], data_train[column_target]
     X_test, y_test = data_test[column_features], data_test[column_target]
-    cv_groups = data_train[column_fold].to_numpy()
+    cv_groups = data_train[column_fold]
 
     return data_train, data_test, X_train, y_train, X_test, y_test, cv_groups
 
